@@ -456,17 +456,24 @@ function leanwi_add_event_page() {
         'audience' => ''
     ];
 
-    // Fetch unused events
-    $unused_events = $wpdb->get_results("
-    SELECT p.ID AS post_id, p.post_title AS title
-    FROM {$wpdb->prefix}posts p
-    WHERE p.post_type = 'tribe_events'
-    AND NOT EXISTS (
-        SELECT 1
-        FROM {$wpdb->prefix}leanwi_event_data ed
-        WHERE ed.post_id = p.ID
-    )
-    ");
+    // Fetch unused events that are in the 'LEANWI Event' Category
+    $category_name = 'LEANWI Event';
+    $query = $wpdb->prepare("
+        SELECT p.ID AS post_id, p.post_title AS title
+        FROM {$wpdb->prefix}posts p
+        INNER JOIN {$wpdb->prefix}term_relationships tr ON p.ID = tr.object_id
+        INNER JOIN {$wpdb->prefix}term_taxonomy tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+        INNER JOIN {$wpdb->prefix}terms t ON tt.term_id = t.term_id
+        WHERE p.post_type = 'tribe_events'
+        AND tt.taxonomy = 'tribe_events_cat'
+        AND t.name = %s
+        AND NOT EXISTS (
+            SELECT 1
+            FROM {$wpdb->prefix}leanwi_event_data ed
+            WHERE ed.post_id = p.ID
+        )
+    ", $category_name);
+    $unused_events = $wpdb->get_results($query);
 
     // Fetch categories (excluding historic)
     $categories = $wpdb->get_results("
@@ -501,8 +508,8 @@ function leanwi_add_event_page() {
                 <tr>
                     <th><label for="title">Event Title</label></th>
                     <td>
-                        <select id="title" name="post_id" required> <!-- Changed name to "post_id" -->
-                            <option value="">Select an event</option>
+                        <select id="title" name="post_id" required>
+                            <option value="">Select an event from the 'LEANWI Event' Category</option>
                             <?php foreach ($unused_events as $unused_event): ?>
                                 <option value="<?php echo esc_attr($unused_event->post_id); ?>">
                                     <?php echo esc_html($unused_event->title); ?>
