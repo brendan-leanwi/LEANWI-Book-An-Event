@@ -250,8 +250,9 @@ function leanwi_events_page() {
     echo '<h1>Events</h1>';
 
     echo '<a href="' . admin_url('admin.php?page=leanwi-add-event') . '" class="button button-primary">Add Event</a>';
-    echo '<p> </p>'; //Space below the button before the event table
-
+    echo '<p>&nbsp;</p>'; 
+    echo '<strong>NOTE:</strong> You need to add the following shortcode to your event pages - <strong>[leanwi_event_details]</strong>';
+    echo '<p> </p>'; 
     echo '<table class="wp-list-table widefat striped">';
     echo '<thead>';
     echo '<tr>';
@@ -292,14 +293,6 @@ function leanwi_events_page() {
 
     echo '</tbody>';
     echo '</table>';
-    echo '<p> </p>'; //Space below the event table
-    
-    // *************************************************************************************************************
-    // Not positive what happens here to make the event use the data. May be able to do this automatically or the user may have to create
-    // an individual event in the templates section
-    // *************************************************************************************************************
-    //echo 'Please add the following shortcode to your page - [venue_details venue_id="1"]. Where 1 is the Venue ID from the above table';
-    
     echo '</div>';
 }
 // Function to get events
@@ -456,6 +449,29 @@ function leanwi_add_event_page() {
         'audience' => ''
     ];
 
+    // Fetch unused events so that latest events end up at the top
+    $unused_events = $wpdb->get_results("
+    SELECT p.ID AS post_id, p.post_title AS title
+    FROM {$wpdb->prefix}posts p
+    WHERE p.post_type = 'tribe_events'
+    AND NOT EXISTS (
+        SELECT 1
+        FROM {$wpdb->prefix}leanwi_event_data ed
+        WHERE ed.post_id = p.ID
+    )
+    Order by p.post_date desc
+    LIMIT 20    
+    ");
+    
+    /* 
+     * Can't decide which code to use but think I can just list all of my Events that I haven't used yet
+     * or perhaps I'll end up making a list of categories in the menu that can be used in this query.
+     * It depends how big this list might get I suppose but I've now made it so latest Events appear at the top
+     * and I have limited the size of the list
+     * 
+     * I can do this because I am not reliant on using divi templates any more and so do not require a set category
+     * to make my functionality work from the template
+     * 
     // Fetch unused events that are in the 'LEANWI Event' Category
     $category_name = 'LEANWI Event';
     $query = $wpdb->prepare("
@@ -472,8 +488,11 @@ function leanwi_add_event_page() {
             FROM {$wpdb->prefix}leanwi_event_data ed
             WHERE ed.post_id = p.ID
         )
+        Order by p.post_date desc
+        LIMIT 20
     ", $category_name);
     $unused_events = $wpdb->get_results($query);
+    */
 
     // Fetch categories (excluding historic)
     $categories = $wpdb->get_results("
@@ -509,7 +528,7 @@ function leanwi_add_event_page() {
                     <th><label for="title">Event Title</label></th>
                     <td>
                         <select id="title" name="post_id" required>
-                            <option value="">Select an event from the 'LEANWI Event' Category</option>
+                            <option value="">Select an event</option>
                             <?php foreach ($unused_events as $unused_event): ?>
                                 <option value="<?php echo esc_attr($unused_event->post_id); ?>">
                                     <?php echo esc_html($unused_event->title); ?>
