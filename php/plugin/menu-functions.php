@@ -270,6 +270,8 @@ function leanwi_events_page() {
     $events = fetch_events();
     if (isset($events['error'])) {
         echo '<tr><td colspan="6">' . esc_html($events['error']) . '</td></tr>';
+    } elseif (empty($events['events'])) {
+        echo '<tr><td colspan="7">No Booking Events have been created yet.</td></tr>';
     } else {
         // Display each venue in a row
         foreach ($events['events'] as $event) {
@@ -332,106 +334,109 @@ function fetch_events() {
 // Function to handle deletion
 function leanwi_delete_event_page() {
     global $wpdb;
-    $venue_table = $wpdb->prefix . 'leanwi_booking_venue';
-    $hours_table = $wpdb->prefix . 'leanwi_booking_venue_hours';
-    $participant_table =  $wpdb->prefix . 'leanwi_booking_participant';
 
-    if (isset($_GET['venue_id'])) {
-        $venue_id = intval($_GET['venue_id']);
-        $participant = $wpdb->get_row($wpdb->prepare("SELECT 1 FROM $participant_table WHERE venue_id = %d", $venue_id));
+    // Check if `event_data_id` is set in the URL
+    if (!isset($_GET['event_data_id'])) {
+        echo '<div class="error"><p>No event specified.</p></div>';
+        return;
+    }
 
-        if($participant){
-            echo '<div class="error"><p>Venue could not be deleted as there are meetings associated with the venue.</p></div>';
-        } else {
-            $wpdb->delete(
-                $venue_table,
-                ['venue_id' => $venue_id],
-                ['%d']
-            );
-            $wpdb->delete(
-                $hours_table,
-                ['venue_id' => $venue_id],
-                ['%d']
-            );
-            echo '<div class="deleted"><p>Venue deleted successfully.</p></div>';
-        }
+    // Sanitize and fetch the event_data_id from the URL
+    $event_data_id = intval($_GET['event_data_id']);
+    $data_table = $wpdb->prefix . 'leanwi_event_data';
+    $participant_table =  $wpdb->prefix . 'leanwi_event_participant';
+
+    $participant = $wpdb->get_row($wpdb->prepare("SELECT 1 FROM $participant_table WHERE event_data_id = %d", $event_data_id));
+
+    if($participant){
+        echo '<div class="error"><p>This event could not be deleted as there are participants attending this event.</p></div>';
     } else {
-        // Handle the case where no ID is provided
-        echo '<div class="error"><p>No Venue ID provided for deletion.</p></div>';
+        /**************************************************************************************************
+         * 
+         * Also deletes on cascade from the following tables:
+         *      leanwi_event_cost
+         *      leanwi_event_disclaimer
+         *  (would do participant too but we're checking for that above)
+         **************************************************************************************************/
+        $wpdb->delete(
+            $data_table,
+            ['event_data_id' => $event_data_id],
+            ['%d']
+        );
+        echo '<div class="deleted"><p>Event deleted successfully.</p></div>';
     }
 }
 
 function leanwi_add_event_page() {
     global $wpdb;
-    $venue_table = $wpdb->prefix . 'leanwi_booking_venue';
-    $hours_table = $wpdb->prefix . 'leanwi_booking_venue_hours';
+    $data_table = $wpdb->prefix . 'leanwi_event_data';
+    $cost_table = $wpdb->prefix . 'leanwi_event_cost';
+    $disclaimer_table = $wpdb->prefix . 'leanwi_event_disclaimer';
 
     // Check if the form has been submitted
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Verify nonce before processing the form
-        if (isset($_POST['venue_nonce']) && wp_verify_nonce($_POST['venue_nonce'], 'add_venue_action')) {
+        if (isset($_POST['event_nonce']) && wp_verify_nonce($_POST['event_nonce'], 'add_event_action')) {
             // The nonce is valid; proceed with form processing.
-            $name = sanitize_text_field($_POST['name']);
+            $post_id = sanitize_text_field($_POST['post_id']);
+            $event_url = esc_url($_POST['event_url']);
+            $event_image = esc_url($_POST['event_image']);
             $capacity = isset($_POST['capacity']) ? intval($_POST['capacity']) : 0;
-            $description = wp_kses_post($_POST['description']);
-            $location = sanitize_text_field($_POST['location']);
-            $image_url = esc_url($_POST['image_url']);
-            $extra_text = wp_kses_post($_POST['extra_text']);
-            $max_slots = isset($_POST['max_slots']) ? intval($_POST['max_slots']) : 0;
-            $slot_cost = isset($_POST['slot_cost']) ? floatval($_POST['slot_cost']) : 0.00;
-            $email_text = sanitize_text_field($_POST['email_text']);
-            $page_url = esc_url($_POST['page_url']);
-            $conditions_of_use_url = esc_url($_POST['conditions_of_use_url']);
-            $display_disclaimers = isset($_POST['display_disclaimers']) ? 1 : 0;
+            $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 1;
+            $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
 
-            // Ensure the value has 2 decimal places
-            $slot_cost = number_format($slot_cost, 2, '.', '');
-
-            // Insert the new venue into the database
+            // Insert the new event into the database
             $inserted = $wpdb->insert(
-                $venue_table,
+                $data_table,
                 array(
-                    'name' => $name,
+                    'post_id' => $post_id,
+                    'event_url' => $event_url,
+                    'event_image' => $event_image,
                     'capacity' => $capacity,
-                    'description' => $description,
-                    'location' => $location,
-                    'image_url' => $image_url,
-                    'extra_text' => $extra_text,
-                    'max_slots' => $max_slots,
-                    'slot_cost' => $slot_cost,
-                    'email_text' => $email_text,
-                    'page_url' => $page_url,
-                    'conditions_of_use_url' => $conditions_of_use_url,
-                    'display_disclaimers' => $display_disclaimers,
+                    'category_id' => $category_id,
+                    'audience_id' => $audience_id,
                 )
             );
 
             if ($inserted) {
-                // Get the newly inserted venue_id
-                $venue_id = $wpdb->insert_id;
-
-                // Insert open and close hours for each day
-                foreach (['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day) {
-                    $open_hour = intval($_POST[$day . '_open_hour']);
-                    $open_minute = intval($_POST[$day . '_open_minute']);
-                    $close_hour = intval($_POST[$day . '_close_hour']);
-                    $close_minute = intval($_POST[$day . '_close_minute']);
-
-                    // Insert the hours into the database
-                    $wpdb->insert(
-                        $hours_table,
-                        array(
-                            'venue_id' => $venue_id,
-                            'day_of_week' => ucfirst($day),
-                            'open_time' => sprintf('%02d:%02d:00', $open_hour, $open_minute),
-                            'close_time' => sprintf('%02d:%02d:00', $close_hour, $close_minute),
-                        )
-                    );
+                // Get the newly inserted event_data_id
+                $event_data_id = $wpdb->insert_id;
+                
+                // Insert costs into the database
+                if (!empty($_POST['cost_name']) && !empty($_POST['cost_amount'])) {
+                    foreach ($_POST['cost_name'] as $key => $cost_name) {
+                        $cost_amount = floatval($_POST['cost_amount'][$key]);
+                        $wpdb->insert(
+                            $cost_table,
+                            array(
+                                'event_data_id' => $event_data_id,
+                                'cost_name' => sanitize_text_field($cost_name),
+                                'cost_amount' => $cost_amount,
+                            )
+                        );
+                    }
                 }
 
-                echo '<div class="updated"><p>Venue added successfully.</p></div>';
+                // Save disclaimers that are checked
+                if (!empty($_POST['disclaimer']) && is_array($_POST['disclaimer'])) {
+                    foreach ($_POST['disclaimer'] as $disclaimer_id) {
+                        // Fetch the disclaimer text
+                        $disclaimer_text = sanitize_text_field($_POST['disclaimer_text_' . $disclaimer_id]);
+
+                        // Insert the disclaimer into the event_disclaimer table
+                        $wpdb->insert(
+                            $disclaimer_table,
+                            array(
+                                'event_data_id' => $event_data_id,
+                                'disclaimer' => $disclaimer_text,
+                            )
+                        );
+                    }
+                }
+
+                echo '<div class="updated"><p>Event added successfully.</p></div>';
             } else {
-                echo '<div class="error"><p>Error adding venue. Please try again.</p></div>';
+                echo '<div class="error"><p>Error adding Event. Please try again.</p></div>';
             }
         } else {
             // Nonce is invalid; handle the error accordingly.
@@ -443,11 +448,12 @@ function leanwi_add_event_page() {
     $event = (object) [
         'event_data_id' => '',
         'post_id' => '',
+        'event_url' => '',
+        'event_image' => '',
         'title' => '',
         'capacity' => '',
         'category' => '',
-        'audience' => '',
-        'historic' => 0
+        'audience' => ''
     ];
 
     // Fetch unused events
@@ -476,6 +482,12 @@ function leanwi_add_event_page() {
     WHERE historic = 0
     ");
 
+    // Fetch saved disclaimers for the event
+    $saved_disclaimers = $wpdb->get_results("
+        SELECT id, disclaimer
+        FROM {$wpdb->prefix}leanwi_event_saved_disclaimer
+    ");
+
 
 ?>
     <div class="wrap">
@@ -489,7 +501,7 @@ function leanwi_add_event_page() {
                 <tr>
                     <th><label for="title">Event Title</label></th>
                     <td>
-                        <select id="title" name="title" required>
+                        <select id="title" name="post_id" required> <!-- Changed name to "post_id" -->
                             <option value="">Select an event</option>
                             <?php foreach ($unused_events as $unused_event): ?>
                                 <option value="<?php echo esc_attr($unused_event->post_id); ?>">
@@ -500,13 +512,21 @@ function leanwi_add_event_page() {
                     </td>
                 </tr>
                 <tr>
+                    <th><label for="event_url">Event URL</label></th>
+                    <td><input type="text" id="event_url" name="event_url" value="<?php echo esc_attr($event->event_url); ?>" required style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="event_image">Image URL</label></th>
+                    <td><input type="text" id="event_image" name="event_image" value="<?php echo esc_attr($event->event_image); ?>" style="width: 90%;"/></td>
+                </tr>
+                <tr>
                     <th><label for="capacity">Capacity</label></th>
                     <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /></td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>
                     <td>
-                        <select id="category" name="category" required>
+                        <select id="category" name="category_id" required> <!-- Correct name for category_id -->
                             <option value="">Select a category</option>
                             <?php foreach ($categories as $category): ?>
                                 <option value="<?php echo esc_attr($category->category_id); ?>">
@@ -519,7 +539,7 @@ function leanwi_add_event_page() {
                 <tr>
                     <th><label for="audience">Audience</label></th>
                     <td>
-                        <select id="audience" name="audience" required>
+                        <select id="audience" name="audience_id" required> <!-- Correct name for audience_id -->
                             <option value="">Select an audience</option>
                             <?php foreach ($audiences as $audience): ?>
                                 <option value="<?php echo esc_attr($audience->audience_id); ?>">
@@ -529,13 +549,34 @@ function leanwi_add_event_page() {
                         </select>
                     </td>
                 </tr>
+
+                <!-- Dynamic costs section -->
                 <tr>
-                    <th><label for="historic">Historic</label></th>
+                    <th><label for="costs">Add Costs</label></th>
                     <td>
-                        <input type="checkbox" id="historic" name="historic" <?php echo ($event->historic == 1) ? 'checked' : ''; ?>/>
-                        <label for="historic">Instead of deleting an event make it historic so it won't show up in the list but can still be used for reporting.</label>
+                        <button type="button" id="add-costs-button" class="button">Add Costs</button>
+                        <div id="costs-container"></div>
                     </td>
                 </tr>
+
+                <!-- Display disclaimers -->
+                <tr>
+                <th><label for="disclaimers">Disclaimers</label></th>
+                <td>
+                    <?php foreach ($saved_disclaimers as $disclaimer): ?>
+                        <div class="disclaimer-item">
+                            <input type="checkbox" name="disclaimer[]" value="<?php echo esc_attr($disclaimer->id); ?>" id="disclaimer_<?php echo esc_attr($disclaimer->id); ?>" />
+                            <label for="disclaimer_<?php echo esc_attr($disclaimer->id); ?>">Include this disclaimer</label><br/>
+                            <!-- Change input to textarea and set rows="3" for 3 lines -->
+                            <textarea name="disclaimer_text_<?php echo esc_attr($disclaimer->id); ?>" rows="3" style="width: 80%;"><?php echo esc_textarea($disclaimer->disclaimer); ?></textarea>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <!-- Button to add new disclaimers -->
+                    <button type="button" id="add-disclaimer-button" class="button">Add Disclaimer</button>
+                    <div id="disclaimers-container"></div>
+                </td>
+            </tr>
             </table>
 
             <?php wp_nonce_field('add_event_action', 'event_nonce'); ?>
@@ -544,233 +585,387 @@ function leanwi_add_event_page() {
             </p>
         </form>
     </div>
+
+    <script>
+        let costCount = 0;
+        document.getElementById('add-costs-button').addEventListener('click', function() {
+            costCount++;
+            let costHtml = `
+                <div id="cost-group-${costCount}" class="cost-group">
+                    <p><strong>Cost ${costCount}</strong></p>
+                    <label for="cost_name_${costCount}">Cost Name</label>
+                    <input type="text" name="cost_name[]" id="cost_name_${costCount}" required />
+
+                    <label for="cost_amount_<?php echo $costCount; ?>">Cost Amount $</label>
+                    <input type="number" name="cost_amount[]" id="cost_amount_<?php echo $costCount; ?>" required step="0.01" min="0" />
+
+                    
+                    <button type="button" onclick="removeCost(${costCount})" class="button">Remove Cost</button>
+                </div>
+            `;
+            document.getElementById('costs-container').insertAdjacentHTML('beforeend', costHtml);
+            this.textContent = 'Add More Costs';
+        });
+
+        function removeCost(costId) {
+            const costGroup = document.getElementById('cost-group-' + costId);
+            costGroup.remove();
+        }
+
+        // For dynamically adding disclaimers
+        let disclaimerCount = 0;
+        document.getElementById('add-disclaimer-button').addEventListener('click', function() {
+            disclaimerCount++;
+            let disclaimerHtml = `
+                <div id="disclaimer-group-${disclaimerCount}" class="disclaimer-group">
+                    <input type="checkbox" name="disclaimer[]" value="new_${disclaimerCount}" id="disclaimer_new_${disclaimerCount}" checked />
+                    <label for="disclaimer_new_${disclaimerCount}">Include this disclaimer</label><br/>
+                    <textarea name="disclaimer_text_new_${disclaimerCount}" rows="3" style="width: 80%;" placeholder="Enter disclaimer text here"></textarea>
+                    
+                    <button type="button" onclick="removeDisclaimer(${disclaimerCount})" class="button">Remove Disclaimer</button>
+                </div>
+            `;
+            document.getElementById('disclaimers-container').insertAdjacentHTML('beforeend', disclaimerHtml);
+        });
+
+        function removeDisclaimer(disclaimerId) {
+            const disclaimerGroup = document.getElementById('disclaimer-group-' + disclaimerId);
+            disclaimerGroup.remove();
+        }
+    </script>
 <?php
 }
-
 
 function leanwi_edit_event_page() {
     global $wpdb;
-    $venue_table = $wpdb->prefix . 'leanwi_booking_venue';
-    $hours_table = $wpdb->prefix . 'leanwi_booking_venue_hours';
 
-    // Check if venue_id is set
-    if (isset($_GET['venue_id'])) {
-        $venue_id = intval($_GET['venue_id']);
-        $venue = $wpdb->get_row($wpdb->prepare("SELECT * FROM $venue_table WHERE venue_id = %d", $venue_id));
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Verify nonce before processing the form
-            if (isset($_POST['venue_nonce']) && wp_verify_nonce($_POST['venue_nonce'], 'update_venue_action')) {
-                // The nonce is valid; proceed with form processing.
-                $name = sanitize_text_field($_POST['name']);
-                $capacity = isset($_POST['capacity']) ? intval($_POST['capacity']) : 0;
-                $description = wp_kses_post($_POST['description']);
-                $location = sanitize_text_field($_POST['location']);
-                $image_url = esc_url($_POST['image_url']);
-                $extra_text = wp_kses_post($_POST['extra_text']);
-                $max_slots = isset($_POST['max_slots']) ? intval($_POST['max_slots']) : 0;
-                $slot_cost = isset($_POST['slot_cost']) ? floatval($_POST['slot_cost']) : 0.00;
-                $email_text = sanitize_text_field($_POST['email_text']);
-                $historic = isset($_POST['historic']) ? 1 : 0; // Set to 1 if checked, otherwise 0
-                $page_url = esc_url($_POST['page_url']);
-                $conditions_of_use_url = esc_url($_POST['conditions_of_use_url']);
-                $display_disclaimers = isset($_POST['display_disclaimers']) ? 1 : 0;
-
-                // Update the venue in the database
-                $updated = $wpdb->update(
-                    $venue_table,
-                    array(
-                        'name' => $name,
-                        'capacity' => $capacity,
-                        'description' => $description,
-                        'location' => $location,
-                        'image_url' => $image_url,
-                        'extra_text' => $extra_text,
-                        'max_slots' => $max_slots,
-                        'slot_cost' => $slot_cost,
-                        'email_text' => $email_text,
-                        'historic' => $historic,
-                        'page_url' => $page_url,
-                        'conditions_of_use_url' => $conditions_of_use_url,
-                        'display_disclaimers' => $display_disclaimers,
-                    ),
-                    array('venue_id' => $venue_id)
-                );
-                if($updated) {
-                    // Update the open and close hours
-                    foreach (['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day) {
-                        $open_hour = intval($_POST[$day . '_open_hour']);
-                        $open_minute = intval($_POST[$day . '_open_minute']);
-                        $close_hour = intval($_POST[$day . '_close_hour']);
-                        $close_minute = intval($_POST[$day . '_close_minute']);
-
-                        // Update the hours in the database
-                        $wpdb->update(
-                            $hours_table,
-                            array(
-                                'open_time' => sprintf('%02d:%02d:00', $open_hour, $open_minute),
-                                'close_time' => sprintf('%02d:%02d:00', $close_hour, $close_minute),
-                            ),
-                            array(
-                                'venue_id' => $venue_id,
-                                'day_of_week' => ucfirst($day)
-                            )
-                        );
-                    }  
-                } else {
-                    echo '<div class="error"><p>Error updating venue. Please try again.</p></div>';
-                }
-
-                echo '<div class="updated"><p>Venue details updated successfully.</p></div>';
-                $venue = $wpdb->get_row($wpdb->prepare("SELECT * FROM $venue_table WHERE venue_id = %d", $venue_id)); // Refresh venue details
-            
-            } else {
-                // Nonce is invalid; handle the error accordingly.
-                wp_die('Nonce verification failed.');
-            }
-        }
-    }
-
-    // If venue not found
-    if (!$venue) {
-        echo '<div class="error"><p>Venue not found.</p></div>';
+    // Check if `event_data_id` is set in the URL
+    if (!isset($_GET['event_data_id'])) {
+        echo '<div class="error"><p>No event specified.</p></div>';
         return;
     }
 
-    // Fetch existing hours for each day
-    $existing_hours = [];
-    foreach (['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day) {
-        $hours = $wpdb->get_row($wpdb->prepare("SELECT open_time, close_time FROM $hours_table WHERE venue_id = %d AND day_of_week = %s", $venue_id, ucfirst($day)));
-        $existing_hours[$day] = $hours ? $hours : (object) ['open_time' => '00:00:00', 'close_time' => '00:00:00'];
+    // Sanitize and fetch the event_data_id from the URL
+    $event_data_id = intval($_GET['event_data_id']);
+    $data_table = $wpdb->prefix . 'leanwi_event_data';
+    $category_table = $wpdb->prefix . 'leanwi_event_category';
+    $audience_table = $wpdb->prefix . 'leanwi_event_audience';
+    $cost_table = $wpdb->prefix . 'leanwi_event_cost';
+    $disclaimer_table = $wpdb->prefix . 'leanwi_event_disclaimer';
+
+    // Fetch the event data based on event_data_id
+    $event = $wpdb->get_row($wpdb->prepare("
+        SELECT * FROM $data_table WHERE event_data_id = %d", $event_data_id
+    ));
+
+    if (!$event) {
+        echo '<div class="error"><p>Event not found.</p></div>';
+        return;
     }
+
+    // Fetch the existing costs for this event
+    $costs = $wpdb->get_results($wpdb->prepare("SELECT * FROM $cost_table WHERE event_data_id = %d", $event_data_id));
+
+    // Fetch disclaimers for this event
+    $disclaimers = $wpdb->get_results($wpdb->prepare("SELECT * FROM $disclaimer_table WHERE event_data_id = %d", $event_data_id));
+
+    // Check if the form has been submitted
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Verify nonce before processing the form
+        if (isset($_POST['event_nonce']) && wp_verify_nonce($_POST['event_nonce'], 'edit_event_action')) {
+            // Sanitize and assign values
+            $post_id = sanitize_text_field($_POST['post_id']);
+            $event_url = esc_url($_POST['event_url']);
+            $event_image = esc_url($_POST['event_image']);
+            $capacity = isset($_POST['capacity']) ? intval($_POST['capacity']) : 0;
+            $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 1;
+            $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
+            $historic = isset($_POST['historic']) ? 1 : 0;
+
+            // Update the event in the database
+            $updated = $wpdb->update(
+                $data_table,
+                array(
+                    'post_id' => $post_id,
+                    'event_url' => $event_url,
+                    'event_image' => $event_image,
+                    'capacity' => $capacity,
+                    'category_id' => $category_id,
+                    'audience_id' => $audience_id,
+                    'historic' => $historic,
+                ),
+                array('event_data_id' => $event_data_id)
+            );
+
+            // Handle updating or deleting costs
+            if (isset($_POST['cost_name']) && isset($_POST['cost_amount'])) {
+                // Remove existing costs first
+                $wpdb->delete($cost_table, array('event_data_id' => $event_data_id));
+
+                // Loop through cost names and amounts and insert new ones
+                foreach ($_POST['cost_name'] as $key => $cost_name) {
+                    $cost_name = sanitize_text_field($cost_name);
+                    $cost_amount = floatval($_POST['cost_amount'][$key]);
+
+                    // Format the cost amount to two decimal places
+                    $cost_amount = number_format($cost_amount, 2, '.', '');
+
+                    // Insert the new costs
+                    $wpdb->insert(
+                        $cost_table,
+                        array(
+                            'event_data_id' => $event_data_id,
+                            'cost_name' => $cost_name,
+                            'cost_amount' => $cost_amount,
+                        )
+                    );
+                }
+            } else {
+                // If no costs were submitted, ensure the existing costs are deleted
+                $wpdb->delete($cost_table, array('event_data_id' => $event_data_id));
+            }
+
+            // Save disclaimers that are checked
+            if (!empty($_POST['disclaimer']) && is_array($_POST['disclaimer'])) {
+                // First, delete the existing disclaimers for the event
+                $wpdb->delete($disclaimer_table, array('event_data_id' => $event_data_id));
+
+                // Loop through the submitted disclaimers and insert them back
+                foreach ($_POST['disclaimer'] as $disclaimer_id) {
+                    // Fetch the disclaimer text if it exists
+                    $disclaimer_text_key = 'disclaimer_text_' . $disclaimer_id;
+                    $disclaimer_text = isset($_POST[$disclaimer_text_key]) ? sanitize_textarea_field($_POST[$disclaimer_text_key]) : '';
+
+                    // Insert each disclaimer as a new entry in the database
+                    $wpdb->insert(
+                        $disclaimer_table,
+                        array(
+                            'event_data_id' => $event_data_id,
+                            'disclaimer' => $disclaimer_text,
+                        ),
+                        array('%d', '%s') // Specify data types
+                    );
+                }
+            } else {
+                // If no disclaimers were submitted, delete existing disclaimers
+                $wpdb->delete($disclaimer_table, array('event_data_id' => $event_data_id));
+            }
+
+            if ($updated !== false) {
+                echo '<div class="updated"><p>Event updated successfully.</p></div>';
+                // Refresh the event data to display updated values
+                $event = $wpdb->get_row($wpdb->prepare("SELECT * FROM $data_table WHERE event_data_id = %d", $event_data_id));
+                $costs = $wpdb->get_results($wpdb->prepare("SELECT * FROM $cost_table WHERE event_data_id = %d", $event_data_id)); // Re-fetch costs
+                $disclaimers = $wpdb->get_results($wpdb->prepare("SELECT * FROM $disclaimer_table WHERE event_data_id = %d", $event_data_id)); // Re-fetch disclaimers
+            } else {
+                echo '<div class="error"><p>Error updating Event. Please try again.</p></div>';
+            }
+        } else {
+            // Nonce is invalid; handle the error accordingly.
+            wp_die('Nonce verification failed.');
+        }
+    }
+
+    // Fetch unused events for the dropdown
+    $unused_events = $wpdb->get_results("
+        SELECT p.ID AS post_id, p.post_title AS title
+        FROM {$wpdb->prefix}posts p
+        WHERE p.post_type = 'tribe_events'
+        AND (p.ID = {$event->post_id} OR NOT EXISTS (
+            SELECT 1
+            FROM {$data_table} ed
+            WHERE ed.post_id = p.ID
+        ))
+    ");
+
+    // Fetch categories (excluding historic)
+    $categories = $wpdb->get_results("
+        SELECT category_id, category_name
+        FROM {$category_table}
+        WHERE historic = 0
+    ");
+
+    // Fetch audience options (excluding historic)
+    $audiences = $wpdb->get_results("
+        SELECT audience_id, audience_name
+        FROM {$audience_table}
+        WHERE historic = 0
+    ");
+
 ?>
     <div class="wrap">
-        <h1>Edit Venue</h1>
+        <h1>Edit Event</h1>
         <form method="post">
             <table class="form-table">
                 <tr>
-                    <th><label for="venue_id">Venue ID</label></th>
-                    <td><input type="text" id="venue_id" value="<?php echo esc_attr($venue->venue_id); ?>" disabled /></td>
+                    <th><label for="event_data_id">Event ID</label></th>
+                    <td><input type="text" id="event_data_id" value="<?php echo esc_attr($event->event_data_id); ?>" disabled /></td>
                 </tr>
                 <tr>
-                    <th><label for="historic">Historic</label></th>
+                    <th><label for="title">Event Title</label></th>
                     <td>
-                        <input type="checkbox" id="historic" name="historic" <?php echo ($venue->historic == 1) ? 'checked' : ''; ?>/>
-                        <label for="historic">Checked indicates that this venue is not being used any more. It is historic.</label>
+                        <select id="title" name="post_id" required>
+                            <option value="">Select an event</option>
+                            <?php foreach ($unused_events as $unused_event): ?>
+                                <option value="<?php echo esc_attr($unused_event->post_id); ?>" <?php selected($unused_event->post_id, $event->post_id); ?>>
+                                    <?php echo esc_html($unused_event->title); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="name">Name</label></th>
-                    <td><input type="text" id="name" name="name" value="<?php echo esc_attr($venue->name); ?>" required /></td>
+                    <th><label for="historic">Make Historic</label></th>
+                    <td>
+                        <input type="checkbox" id="historic" name="historic" <?php echo esc_attr($event->historic) == 1 ? 'checked' : ''; ?> />
+                    </td>
+                </tr>
+
+                <tr>
+                    <th><label for="event_url">Event URL</label></th>
+                    <td><input type="text" id="event_url" name="event_url" value="<?php echo esc_attr($event->event_url); ?>" required style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="event_image">Image URL</label></th>
+                    <td><input type="text" id="event_image" name="event_image" value="<?php echo esc_attr($event->event_image); ?>" style="width: 90%;"/></td>
                 </tr>
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
-                    <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($venue->capacity); ?>" required /></td>
+                    <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /></td>
                 </tr>
                 <tr>
-                    <th><label for="description">Venue Summary</label></th>
-                    <td><textarea id="description" name="description" required style="width: 90%;"><?php echo esc_textarea($venue->description); ?></textarea></td>
-                </tr>
-                <tr>
-                    <th><label for="extra_text">More Display Text</label></th>
-                    <td><textarea id="extra_text" name="extra_text" style="width: 90%;"><?php echo esc_textarea($venue->extra_text); ?></textarea></td>
-                </tr>
-                <tr>
-                    <th><label for="location">Location</label></th>
-                    <td><input type="text" id="location" name="location" value="<?php echo esc_attr((string)$venue->location); ?>" required /></td>
-                </tr>
-                <tr>
-                    <th><label for="max_slots">Maximum Bookable Slots Per Day</label></th>
-                    <td><input type="number" id="max_slots" name="max_slots" value="<?php echo esc_attr($venue->max_slots); ?>" required /></td>
-                </tr>
-                <tr>
-                    <th><label for="image_url">Image URL</label></th>
-                    <td><input type="text" id="image_url" name="image_url" style="width: 90%;" value="<?php echo esc_attr((string)$venue->image_url); ?>" /></td>
-                </tr>
-                <tr>
-                    <th><label for="conditions_of_use_url">Conditions of Use URL</label></th>
-                    <td><input type="text" id="conditions_of_use_url" name="conditions_of_use_url" style="width: 90%;" value="<?php echo esc_attr($venue->conditions_of_use_url); ?>" /></td>
-                </tr>
-                <tr>
-                    <th><label for="display_disclaimers">Display disclaimers for this venue?</label></th>
-                    <td><input type="checkbox" id="display_disclaimers" name="display_disclaimers" <?php echo ($venue->display_disclaimers == 1) ? 'checked' : ''; ?>/></td>
-                </tr>
-                <tr>
-                    <th><label for="slot_cost">Cost per slot</label></th>
+                    <th><label for="category">Category</label></th>
                     <td>
-                        <div class="currency-input">
-                            <span class="currency-symbol">$</span>
-                            <input type="text" id="slot_cost" name="slot_cost" value="<?php echo esc_attr(number_format((float) $venue->slot_cost, 2, '.', '')); ?>" required />
-                        </div>
+                        <select id="category" name="category_id" required>
+                            <option value="">Select a category</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo esc_attr($category->category_id); ?>" <?php selected($category->category_id, $event->category_id); ?>>
+                                    <?php echo esc_html($category->category_name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </td>
                 </tr>
                 <tr>
-                    <th><label for="email_text">Email Text</label></th>
-                    <td><textarea id="email_text" name="email_text" style="width: 90%;"><?php echo esc_html((string)$venue->email_text); ?></textarea></td>
+                    <th><label for="audience">Audience</label></th>
+                    <td>
+                        <select id="audience" name="audience_id" required>
+                            <option value="">Select an audience</option>
+                            <?php foreach ($audiences as $audience): ?>
+                                <option value="<?php echo esc_attr($audience->audience_id); ?>" <?php selected($audience->audience_id, $event->audience_id); ?>>
+                                    <?php echo esc_html($audience->audience_name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
                 </tr>
                 <tr>
-                    <th><label for="page_url">Page URL</label></th>
-                    <td><input type="text" id="page_url" name="page_url" style="width: 90%;" value="<?php echo esc_attr((string)$venue->page_url); ?>" /></td>
+                    <th><label for="costs">Costs</label></th>
+                    <td id="costs-container">
+                        <?php if ($costs): ?>
+                            <?php foreach ($costs as $index => $cost): ?>
+                                <div id="cost-group-<?php echo $index; ?>" class="cost-group">
+                                    <p><strong>Cost <?php echo $index + 1; ?></strong></p>
+                                    <label for="cost_name_<?php echo $index; ?>">Cost Name</label>
+                                    <input type="text" name="cost_name[]" id="cost_name_<?php echo $index; ?>" value="<?php echo esc_attr($cost->cost_name); ?>" required />
+
+                                    <label for="cost_amount_<?php echo $index; ?>">Cost Amount</label>
+                                    <input type="number" name="cost_amount[]" id="cost_amount_<?php echo $index; ?>" value="<?php echo esc_attr($cost->cost_amount); ?>" required step="0.01" min="0" />
+
+                                    <button type="button" onclick="removeCost(<?php echo $index; ?>)" class="button">Remove Cost</button>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p>No costs available for this event.</p>
+                        <?php endif; ?>
+                    </td>
                 </tr>
+                <tr>
+                    <th></th>
+                    <td>
+                        <button type="button" id="add-cost" class="button">Add More Costs</button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th><label for="disclaimers">Disclaimers</label></th>
+                    <td>
+                        <?php foreach ($disclaimers as $disclaimer): ?>
+                            <div class="disclaimer-item">
+                                <input type="checkbox" name="disclaimer[]" value="<?php echo esc_attr($disclaimer->id); ?>" id="disclaimer_<?php echo esc_attr($disclaimer->id); ?>" checked />
+                                <label for="disclaimer_<?php echo esc_attr($disclaimer->id); ?>">Include this disclaimer</label><br/>
+                                <!-- Textarea for disclaimer text -->
+                                <textarea name="disclaimer_text_<?php echo esc_attr($disclaimer->id); ?>" rows="3" style="width: 80%;"><?php echo esc_textarea($disclaimer->disclaimer); ?></textarea>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <!-- Button to add new disclaimers -->
+                        <button type="button" id="add-disclaimer-button" class="button">Add Disclaimer</button>
+                        <div id="disclaimers-container"></div>
+                    </td>
+                </tr>
+
             </table>
 
-            <h2>Open Hours</h2>
-            <table class="form-table">
-                <?php foreach (['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day): ?>
-                    <tr>
-                        <th><label><?php echo ucfirst($day); ?></label></th>
-                        <td>
-                            <select name="<?php echo $day; ?>_open_hour">
-                                <?php 
-                                $open_hour = intval(explode(':', $existing_hours[$day]->open_time)[0]); // Get open hour
-                                for ($hour = 0; $hour < 24; $hour++): ?>
-                                    <option value="<?php echo $hour; ?>" <?php selected($open_hour, $hour); ?>>
-                                        <?php echo str_pad($hour, 2, '0', STR_PAD_LEFT); ?>
-                                    </option>
-                                <?php endfor; ?>
-                            </select>
-                            :
-                            <select name="<?php echo $day; ?>_open_minute">
-                                <?php 
-                                $open_minute = intval(explode(':', $existing_hours[$day]->open_time)[1]); // Get open minute
-                                foreach ([0, 15, 30, 45] as $minute): ?>
-                                    <option value="<?php echo $minute; ?>" <?php selected($open_minute, $minute); ?>>
-                                        <?php echo str_pad($minute, 2, '0', STR_PAD_LEFT); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            to
-                            <select name="<?php echo $day; ?>_close_hour">
-                                <?php 
-                                $close_hour = intval(explode(':', $existing_hours[$day]->close_time)[0]); // Get close hour
-                                for ($hour = 0; $hour < 24; $hour++): ?>
-                                    <option value="<?php echo $hour; ?>" <?php selected($close_hour, $hour); ?>>
-                                        <?php echo str_pad($hour, 2, '0', STR_PAD_LEFT); ?>
-                                    </option>
-                                <?php endfor; ?>
-                            </select>
-                            :
-                            <select name="<?php echo $day; ?>_close_minute">
-                                <?php 
-                                $close_minute = intval(explode(':', $existing_hours[$day]->close_time)[1]); // Get close minute
-                                foreach ([0, 15, 30, 45] as $minute): ?>
-                                    <option value="<?php echo $minute; ?>" <?php selected($close_minute, $minute); ?>>
-                                        <?php echo str_pad($minute, 2, '0', STR_PAD_LEFT); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-            <?php wp_nonce_field('update_venue_action', 'venue_nonce'); ?>
+            <?php wp_nonce_field('edit_event_action', 'event_nonce'); ?>
             <p class="submit">
-                <input type="submit" class="button button-primary" value="Update Venue" />
+                <input type="submit" class="button button-primary" value="Update Event" />
             </p>
         </form>
     </div>
+
+    <script>
+        // Add a new cost input group dynamically
+        let costIndex = <?php echo count($costs); ?>;
+
+        document.getElementById('add-cost').addEventListener('click', function() {
+            const costContainer = document.getElementById('costs-container');
+            const costGroup = document.createElement('div');
+            costGroup.classList.add('cost-group');
+            costGroup.id = 'cost-group-' + costIndex;
+
+            costGroup.innerHTML = `
+                <p><strong>Cost ${costIndex + 1}</strong></p>
+                <label for="cost_name_${costIndex}">Cost Name</label>
+                <input type="text" name="cost_name[]" id="cost_name_${costIndex}" required />
+
+                <label for="cost_amount_${costIndex}">Cost Amount</label>
+                <input type="number" name="cost_amount[]" id="cost_amount_${costIndex}" required step="0.01" min="0" />
+
+                <button type="button" onclick="removeCost(${costIndex})" class="button">Remove Cost</button>
+            `;
+            costContainer.appendChild(costGroup);
+            costIndex++;
+        });
+
+        function removeCost(index) {
+            document.getElementById('cost-group-' + index).remove();
+        }
+
+        // For dynamically adding disclaimers
+        let disclaimerCount = 0;
+        document.getElementById('add-disclaimer-button').addEventListener('click', function() {
+            disclaimerCount++;
+            let disclaimerHtml = `
+                <div id="disclaimer-group-${disclaimerCount}" class="disclaimer-group">
+                    <input type="checkbox" name="disclaimer[]" value="new_${disclaimerCount}" id="disclaimer_new_${disclaimerCount}" checked />
+                    <label for="disclaimer_new_${disclaimerCount}">Include this disclaimer</label><br/>
+                    <textarea name="disclaimer_text_new_${disclaimerCount}" rows="3" style="width: 80%;" placeholder="Enter disclaimer text here"></textarea>
+                    
+                    <button type="button" onclick="removeDisclaimer(${disclaimerCount})" class="button">Remove Disclaimer</button>
+                </div>
+            `;
+            document.getElementById('disclaimers-container').insertAdjacentHTML('beforeend', disclaimerHtml);
+        });
+
+        function removeDisclaimer(disclaimerId) {
+            const disclaimerGroup = document.getElementById('disclaimer-group-' + disclaimerId);
+            disclaimerGroup.remove();
+        }
+    </script>
 <?php
 }
+
 
 /**************************************************************************************************
  * Categories
