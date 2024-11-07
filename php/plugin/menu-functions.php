@@ -127,44 +127,44 @@ function leanwi_event_add_admin_menu() {
         __NAMESPACE__ . '\\leanwi_event_edit_audience_page'      // Callback function to display the edit audience form
     );
 
-    // Sub-menu: "Affirmations"
+    // Sub-menu: "disclaimers"
     add_submenu_page(
         'leanwi-book-an-event-main',    // Parent slug
-        'Affirmations',                   // Page title
-        'Affirmations',                   // Menu title
+        'Disclaimers',                   // Page title
+        'Disclaimers',                   // Menu title
         'manage_options',             // Capability
-        'leanwi-book-an-event-affirmations',// Menu slug
-        __NAMESPACE__ . '\\leanwi_event_affirmations_page'        // Callback function to display settings
+        'leanwi-book-an-event-disclaimers',// Menu slug
+        __NAMESPACE__ . '\\leanwi_event_disclaimers_page'        // Callback function to display settings
     );
 
-    // Sub-menu: "Add Affirmation"
+    // Sub-menu: "Add Disclaimer"
     add_submenu_page(
         'leanwi-book-an-event-main',
-        'Add Affirmation',
-        'Add Affirmation',
+        'Add Disclaimer',
+        'Add Disclaimer',
         'manage_options',
-        'leanwi-event-add-affirmation',
-        __NAMESPACE__ . '\\leanwi_event_add_affirmation_page'
+        'leanwi-event-add-disclaimer',
+        __NAMESPACE__ . '\\leanwi_event_add_disclaimer_page'
     );
 
-    // Sub-menu: "Delete Affirmation"
+    // Sub-menu: "Delete Disclaimer"
     add_submenu_page(
         'leanwi-book-an-event-main',
-        'Delete Affirmation',
-        'Delete Affirmation',
+        'Delete Disclaimer',
+        'Delete Disclaimer',
         'manage_options',
-        'leanwi-event-delete-affirmation',
-        __NAMESPACE__ . '\\leanwi_event_delete_affirmation_page'
+        'leanwi-event-delete-disclaimer',
+        __NAMESPACE__ . '\\leanwi_event_delete_disclaimer_page'
     );
 
-    // Sub-menu: "Edit Affirmation"
+    // Sub-menu: "Edit Disclaimer"
     add_submenu_page(
         'leanwi-book-an-event-main', // Parent slug (linked to Audiences submenu)
-        'Edit Affirmation',                 // Page title
-        'Edit Affirmation',                 // Menu title
+        'Edit Disclaimer',                 // Page title
+        'Edit Disclaimer',                 // Menu title
         'manage_options',             // Capability
-        'leanwi-event-edit-affirmation',          // Menu slug
-        __NAMESPACE__ . '\\leanwi_event_edit_affirmation_page'      // Callback function to display the edit affirmation form
+        'leanwi-event-edit-disclaimer',          // Menu slug
+        __NAMESPACE__ . '\\leanwi_event_edit_disclaimer_page'      // Callback function to display the edit Disclaimer form
     );
 
     // Sub-menu: "Reports"
@@ -215,13 +215,13 @@ function leanwi_event_hide_add_edit_submenus_css() {
         #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-edit-audience"] {
             display: none !important;
         }
-        #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-add-affirmation"] {
+        #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-add-disclaimer"] {
             display: none !important;
         }
-        #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-delete-affirmation"] {
+        #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-delete-disclaimer"] {
             display: none !important;
         }
-        #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-edit-affirmation"] {
+        #toplevel_page_leanwi-book-an-event-main .wp-submenu a[href="admin.php?page=leanwi-event-edit-disclaimer"] {
             display: none !important;
         }
     </style>';
@@ -382,7 +382,7 @@ function leanwi_add_event_page() {
             $email_text = sanitize_text_field($_POST['email_text']);
             $page_url = esc_url($_POST['page_url']);
             $conditions_of_use_url = esc_url($_POST['conditions_of_use_url']);
-            $display_affirmations = isset($_POST['display_affirmations']) ? 1 : 0;
+            $display_disclaimers = isset($_POST['display_disclaimers']) ? 1 : 0;
 
             // Ensure the value has 2 decimal places
             $slot_cost = number_format($slot_cost, 2, '.', '');
@@ -402,7 +402,7 @@ function leanwi_add_event_page() {
                     'email_text' => $email_text,
                     'page_url' => $page_url,
                     'conditions_of_use_url' => $conditions_of_use_url,
-                    'display_affirmations' => $display_affirmations,
+                    'display_disclaimers' => $display_disclaimers,
                 )
             );
 
@@ -574,7 +574,7 @@ function leanwi_edit_event_page() {
                 $historic = isset($_POST['historic']) ? 1 : 0; // Set to 1 if checked, otherwise 0
                 $page_url = esc_url($_POST['page_url']);
                 $conditions_of_use_url = esc_url($_POST['conditions_of_use_url']);
-                $display_affirmations = isset($_POST['display_affirmations']) ? 1 : 0;
+                $display_disclaimers = isset($_POST['display_disclaimers']) ? 1 : 0;
 
                 // Update the venue in the database
                 $updated = $wpdb->update(
@@ -592,7 +592,7 @@ function leanwi_edit_event_page() {
                         'historic' => $historic,
                         'page_url' => $page_url,
                         'conditions_of_use_url' => $conditions_of_use_url,
-                        'display_affirmations' => $display_affirmations,
+                        'display_disclaimers' => $display_disclaimers,
                     ),
                     array('venue_id' => $venue_id)
                 );
@@ -692,8 +692,8 @@ function leanwi_edit_event_page() {
                     <td><input type="text" id="conditions_of_use_url" name="conditions_of_use_url" style="width: 90%;" value="<?php echo esc_attr($venue->conditions_of_use_url); ?>" /></td>
                 </tr>
                 <tr>
-                    <th><label for="display_affirmations">Display affirmations for this venue?</label></th>
-                    <td><input type="checkbox" id="display_affirmations" name="display_affirmations" <?php echo ($venue->display_affirmations == 1) ? 'checked' : ''; ?>/></td>
+                    <th><label for="display_disclaimers">Display disclaimers for this venue?</label></th>
+                    <td><input type="checkbox" id="display_disclaimers" name="display_disclaimers" <?php echo ($venue->display_disclaimers == 1) ? 'checked' : ''; ?>/></td>
                 </tr>
                 <tr>
                     <th><label for="slot_cost">Cost per slot</label></th>
@@ -1160,43 +1160,42 @@ function leanwi_event_edit_audience_page() {
 }
 
 /**************************************************************************************************
- * Affirmations
+ * disclaimers
  **************************************************************************************************/
 
-// Function to display the list of affirmations
-function leanwi_event_affirmations_page() {
-    global $wpdb;
-
-    // Display affirmations list
+// Function to display the list of disclaimers
+function leanwi_event_disclaimers_page() {
+    
+    // Display disclaimers list
     echo '<div class="wrap">';
-    echo '<h1>Affirmations</h1>';
+    echo '<h1>Disclaimers</h1>';
 
-    echo '<a href="' . admin_url('admin.php?page=leanwi-event-add-affirmation') . '" class="button button-primary">Add Affirmation</a>';
-    echo '<p> </p>'; // Space below the button before the affirmation table
+    echo '<a href="' . admin_url('admin.php?page=leanwi-event-add-disclaimer') . '" class="button button-primary">Add Disclaimer</a>';
+    echo '<p> </p>'; // Space below the button before the disclaimer table
 
     echo '<table class="wp-list-table widefat striped">';
     echo '<thead>';
     echo '<tr>';
     echo '<th scope="col">ID</th>';
-    echo '<th scope="col" width="75%">Affirmation</th>';
+    echo '<th scope="col" width="75%">Disclaimer</th>';
     echo '<th scope="col" style="text-align: right; padding-right: 40px;">Actions</th>';
     echo '</tr>';
     echo '</thead>';
     echo '<tbody>';
 
-    // Fetch affirmations
-    $affirmations = fetch_affirmations();
-    if (empty($affirmations)) {
-        echo '<tr><td colspan="3">No affirmations found.</td></tr>';
+    // Fetch disclaimers
+    $disclaimers = fetch_disclaimers();
+    if (empty($disclaimers)) {
+        echo '<tr><td colspan="3">No disclaimers found.</td></tr>';
     } else {
-        // Display each affirmation in a row
-        foreach ($affirmations as $affirmation) {
+        // Display each disclaimer in a row
+        foreach ($disclaimers as $disclaimer) {
             echo '<tr>';
-            echo '<td>' . esc_html($affirmation['id']) . '</td>';
-            echo '<td>' . esc_html($affirmation['affirmation']) . '</td>';
+            echo '<td>' . esc_html($disclaimer['id']) . '</td>';
+            echo '<td>' . esc_html($disclaimer['disclaimer']) . '</td>';
             echo '<td style="text-align: right;">';
-            echo '<a href="' . esc_url(admin_url('admin.php?page=leanwi-event-edit-affirmation&id=' . esc_attr($affirmation['id']))) . '" class="button">Edit</a> ';
-            echo '<a href="' . esc_url(admin_url('admin.php?page=leanwi-event-delete-affirmation&id=' . esc_attr($affirmation['id']))) . '" class="button" onclick="return confirm(\'Are you sure you want to delete this affirmation?\');">Delete</a>';
+            echo '<a href="' . esc_url(admin_url('admin.php?page=leanwi-event-edit-disclaimer&id=' . esc_attr($disclaimer['id']))) . '" class="button">Edit</a> ';
+            echo '<a href="' . esc_url(admin_url('admin.php?page=leanwi-event-delete-disclaimer&id=' . esc_attr($disclaimer['id']))) . '" class="button" onclick="return confirm(\'Are you sure you want to delete this disclaimer?\');">Delete</a>';
             echo '</td>';
             echo '</tr>';
         }
@@ -1207,24 +1206,24 @@ function leanwi_event_affirmations_page() {
     echo '</div>';
 }
 
-// Function to get affirmations
-function fetch_affirmations() {
+// Function to get disclaimers
+function fetch_disclaimers() {
     global $wpdb;
-    $table_name = $wpdb->prefix . 'leanwi_booking_affirmation';
+    $table_name = $wpdb->prefix . 'leanwi_event_saved_disclaimer';
 
-    // Fetch affirmations and check for database errors
-    $affirmations = $wpdb->get_results("SELECT id, affirmation FROM $table_name", ARRAY_A);
+    // Fetch disclaimers and check for database errors
+    $disclaimers = $wpdb->get_results("SELECT id, disclaimer FROM $table_name", ARRAY_A);
     if ($wpdb->last_error) {
         return ['error' => $wpdb->last_error];
     }
 
-    return $affirmations ?: []; // Return an empty array if no results are found
+    return $disclaimers ?: []; // Return an empty array if no results are found
 }
 
 // Function to handle deletion
-function leanwi_event_delete_affirmation_page() {
+function leanwi_event_delete_disclaimer_page() {
     global $wpdb;
-    $table_name = $wpdb->prefix . 'leanwi_booking_affirmation';
+    $table_name = $wpdb->prefix . 'leanwi_event_saved_disclaimer';
 
     // Check if an ID is provided for deleting
     if (isset($_GET['id'])) {
@@ -1234,81 +1233,81 @@ function leanwi_event_delete_affirmation_page() {
             ['id' => $id],
             ['%d']
         );
-        echo '<div class="deleted"><p>Affirmation deleted successfully.</p></div>';
+        echo '<div class="deleted"><p>Disclaimer deleted successfully.</p></div>';
     } else {
         // Handle the case where no ID is provided
-        echo '<div class="error"><p>No affirmation ID provided for deletion.</p></div>';
+        echo '<div class="error"><p>No Disclaimer ID provided for deletion.</p></div>';
     }
 }
 
-function leanwi_event_add_affirmation_page() {
+function leanwi_event_add_disclaimer_page() {
     global $wpdb;
-    $table_name = $wpdb->prefix . 'leanwi_booking_affirmation';
+    $table_name = $wpdb->prefix . 'leanwi_event_saved_disclaimer';
 
     // Handle form submission
-    if (isset($_POST['add_affirmation'])) {
+    if (isset($_POST['add_disclaimer'])) {
         $wpdb->insert(
             $table_name,
-            ['affirmation' => sanitize_text_field($_POST['affirmation'])],
+            ['disclaimer' => sanitize_text_field($_POST['disclaimer'])],
             ['%s']
         );
-        echo '<div class="updated"><p>Affirmation added successfully.</p></div>';
+        echo '<div class="updated"><p>Disclaimer added successfully.</p></div>';
     }
 
-    // Display the add affirmation form
+    // Display the add Disclaimer form
     echo '<div class="wrap">';
-    echo '<h1>Add Affirmation</h1>';
+    echo '<h1>Add Disclaimer</h1>';
     echo '<form method="POST">';
-    echo '<p>Affirmation:<br><textarea name="affirmation" rows="5" cols="50" required></textarea></p>';
-    echo '<p><input type="submit" name="add_affirmation" value="Add Affirmation" class="button button-primary"></p>';
+    echo '<p>Disclaimer:<br><textarea name="disclaimer" rows="5" cols="50" required></textarea></p>';
+    echo '<p><input type="submit" name="add_disclaimer" value="Add Disclaimer" class="button button-primary"></p>';
     echo '</form>';
     echo '</div>';
 }
 
-// Function to handle editing of an affirmation
-function leanwi_event_edit_affirmation_page() {
+// Function to handle editing of an disclaimer
+function leanwi_event_edit_disclaimer_page() {
     global $wpdb;
-    $table_name = $wpdb->prefix . 'leanwi_booking_affirmation';
+    $table_name = $wpdb->prefix . 'leanwi_event_saved_disclaimer';
 
-    // Handle the form submission to update the affirmation
-    if (isset($_POST['update_affirmation'])) {
+    // Handle the form submission to update the disclaimer
+    if (isset($_POST['update_disclaimer'])) {
         $id = intval($_POST['id']);
-        $affirmation = sanitize_text_field($_POST['affirmation']);
+        $disclaimer = sanitize_text_field($_POST['disclaimer']);
 
-        // Update the affirmation in the database
+        // Update the disclaimer in the database
         $wpdb->update(
             $table_name,
-            ['affirmation' => $affirmation],
+            ['disclaimer' => $disclaimer],
             ['id' => $id],
             ['%s'],
             ['%d']
         );
 
-        echo '<div class="notice notice-success"><p>Affirmation updated successfully.</p></div>';
+        echo '<div class="notice notice-success"><p>Disclaimer updated successfully.</p></div>';
     }
 
     // Check if an ID is provided for editing
     if (isset($_GET['id'])) {
         $id = intval($_GET['id']);
-        $affirmation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
+        $disclaimer = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
 
-        if ($affirmation) {
-            // Display form to edit the affirmation
+        if ($disclaimer) {
+            // Display form to edit the disclaimer
             echo '<div class="wrap">';
-            echo '<h1>Edit Affirmation</h1>';
+            echo '<h1>Edit Disclaimer</h1>';
             echo '<form method="POST">';
-            echo '<input type="hidden" name="id" value="' . esc_attr($affirmation->id) . '">';
+            echo '<input type="hidden" name="id" value="' . esc_attr($disclaimer->id) . '">';
 
-            // Display the Affirmation input
-            echo '<p>Affirmation:<br><textarea name="affirmation" rows="5" cols="50" required>' . esc_textarea($affirmation->affirmation) . '</textarea></p>';
+            // Display the disclaimer input
+            echo '<p>Disclaimer:<br><textarea name="disclaimer" rows="5" cols="50" required>' . esc_textarea($disclaimer->disclaimer) . '</textarea></p>';
             
-            // Submit button to update the affirmation
-            echo '<p><input type="submit" name="update_affirmation" value="Save Changes" class="button button-primary"></p>';
+            // Submit button to update the disclaimer
+            echo '<p><input type="submit" name="update_disclaimer" value="Save Changes" class="button button-primary"></p>';
             echo '</form>';
             echo '</div>';
         } else {
-            // Display a message if the affirmation is not found
-            echo '<div class="notice notice-error"><p>Affirmation not found.</p></div>';
+            // Display a message if the disclaimer is not found
+            echo '<div class="notice notice-error"><p>Disclaimer not found.</p></div>';
         }
     } else {
         // Display a message if no ID is provided

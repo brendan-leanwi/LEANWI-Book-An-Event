@@ -79,18 +79,18 @@ function leanwi_event_create_tables() {
         FOREIGN KEY (cost_id) REFERENCES {$wpdb->prefix}leanwi_event_cost(cost_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
-    // SQL for creating leanwi_event_affirmation table
-    $sql8 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_affirmation (
+    // SQL for creating leanwi_event_disclaimer table
+    $sql8 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_disclaimer (
         id INT AUTO_INCREMENT PRIMARY KEY,
         event_data_id INT NOT NULL,
-        affirmation TEXT NOT NULL,
+        disclaimer TEXT NOT NULL,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
     // SQL for creating leanwi_booking_category table
-    $sql9 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_saved_affirmation (
+    $sql9 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_saved_disclaimer (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        affirmation TEXT NOT NULL
+        disclaimer TEXT NOT NULL
     ) $engine $charset_collate;";
 
     // Execute the SQL queries
@@ -178,12 +178,12 @@ function leanwi_event_drop_tables() {
     // SQL to drop the tables
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_participant");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_participant_cost");
-    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_affirmation");
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_disclaimer");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_cost");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_data");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_category");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_audience");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_user");
-    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_saved_affirmation");
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_saved_disclaimer");
 }
 
