@@ -377,6 +377,7 @@ function leanwi_add_event_page() {
             $capacity = isset($_POST['capacity']) ? intval($_POST['capacity']) : 0;
             $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 1;
             $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
+            $participation_rule = esc_html($_POST['participation_rule']);
 
             // Insert the new event into the database
             $inserted = $wpdb->insert(
@@ -385,6 +386,7 @@ function leanwi_add_event_page() {
                     'post_id' => $post_id,
                     'event_url' => $event_url,
                     'event_image' => $event_image,
+                    'participation_rule' => $participation_rule,
                     'capacity' => $capacity,
                     'category_id' => $category_id,
                     'audience_id' => $audience_id,
@@ -446,7 +448,8 @@ function leanwi_add_event_page() {
         'title' => '',
         'capacity' => '',
         'category' => '',
-        'audience' => ''
+        'audience' => '',
+        'participation_rule' => 'any'
     ];
 
     // Fetch unused events so that latest events end up at the top
@@ -544,6 +547,16 @@ function leanwi_add_event_page() {
                 <tr>
                     <th><label for="event_image">Image URL</label></th>
                     <td><input type="text" id="event_image" name="event_image" value="<?php echo esc_attr($event->event_image); ?>" style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="participation_rule">Participation Rule</label></th>
+                    <td>
+                        <select id="participation_rule" name="participation_rule" required>
+                            <option value="any" <?php selected($event->participation_rule, 'any'); ?>>Any</option>
+                            <option value="all" <?php selected($event->participation_rule, 'all'); ?>>All</option>
+                            <option value="one" <?php selected($event->participation_rule, 'one'); ?>>One</option>
+                        </select>
+                    </td>
                 </tr>
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
@@ -707,6 +720,7 @@ function leanwi_edit_event_page() {
             $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 1;
             $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
             $historic = isset($_POST['historic']) ? 1 : 0;
+            $participation_rule = esc_html($_POST['participation_rule']);
 
             // Update the event in the database
             $updated = $wpdb->update(
@@ -719,6 +733,7 @@ function leanwi_edit_event_page() {
                     'category_id' => $category_id,
                     'audience_id' => $audience_id,
                     'historic' => $historic,
+                    'participation_rule' => $participation_rule,
                 ),
                 array('event_data_id' => $event_data_id)
             );
@@ -854,6 +869,16 @@ function leanwi_edit_event_page() {
                 <tr>
                     <th><label for="event_image">Image URL</label></th>
                     <td><input type="text" id="event_image" name="event_image" value="<?php echo esc_attr($event->event_image); ?>" style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="participation_rule">Participation Rule</label></th>
+                    <td>
+                        <select id="participation_rule" name="participation_rule" required>
+                            <option value="any" <?php selected($event->participation_rule, 'any'); ?>>Any</option>
+                            <option value="all" <?php selected($event->participation_rule, 'all'); ?>>All</option>
+                            <option value="one" <?php selected($event->participation_rule, 'one'); ?>>One</option>
+                        </select>
+                    </td>
                 </tr>
                 <tr>
                     <th><label for="capacity">Capacity</label></th>

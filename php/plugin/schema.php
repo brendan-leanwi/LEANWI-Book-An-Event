@@ -31,6 +31,7 @@ function leanwi_event_create_tables() {
         post_id BIGINT(20) unsigned NOT NULL,
         event_url CHAR(255) NOT NULL,
         event_image CHAR(255),
+        participation_rule VARCHAR(10) NOT NULL DEFAULT 'any',
         capacity INT NOT NULL,
         category_id INT NOT NULL,
         audience_id INT NOT NULL,
