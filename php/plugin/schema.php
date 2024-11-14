@@ -49,35 +49,35 @@ function leanwi_event_create_tables() {
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
-    // SQL for creating leanwi_event_participant table
-    $sql5 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_user (
-        user_id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        phone VARCHAR(20)
-    ) $engine $charset_collate;";
-
-    // SQL for creating leanwi_event_participant table
-    $sql6 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_participant (
-        participant_id INT AUTO_INCREMENT PRIMARY KEY,
-        unique_booking_id CHAR(7) NOT NULL,
+    // SQL for creating leanwi_event_booking table
+    $sql5 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_booking (
+        booking_id INT AUTO_INCREMENT PRIMARY KEY,
+        booking_reference CHAR(7) NOT NULL UNIQUE,
         event_data_id INT NOT NULL,
-        event_occurrence_id BIGINT(20) unsigned NOT NULL,
-        user_id INT NOT NULL,
-        total_number_of_participants INT NOT NULL,
-        FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE,
-        FOREIGN KEY (event_occurrence_id) REFERENCES {$wpdb->prefix}tec_occurrences(occurrence_id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES {$wpdb->prefix}leanwi_event_user(user_id) ON DELETE CASCADE
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20),
+        total_participants INT NOT NULL,
+        FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
     // SQL for creating leanwi_event_participant table
-    $sql7 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_participant_cost (
-        participant_cost_id INT AUTO_INCREMENT PRIMARY KEY,
-        participant_id INT NOT NULL,
+    $sql6 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_booking_costs (
+        booking_id INT NOT NULL,
         cost_id INT NOT NULL,
         number_of_participants INT NOT NULL,
-        FOREIGN KEY (participant_id) REFERENCES {$wpdb->prefix}leanwi_event_participant(participant_id) ON DELETE CASCADE,
+        payment_received TINYINT(1) DEFAULT 0,
+        FOREIGN KEY (booking_id) REFERENCES {$wpdb->prefix}leanwi_event_booking(booking_id) ON DELETE CASCADE,
         FOREIGN KEY (cost_id) REFERENCES {$wpdb->prefix}leanwi_event_cost(cost_id) ON DELETE CASCADE
+    ) $engine $charset_collate;";
+
+    // SQL for creating leanwi_event_booking_occurrences table
+    $sql7 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_booking_occurrences (
+        booking_id INT NOT NULL,
+        occurrence_id bigint(20) unsigned,
+        number_of_participants INT NOT NULL,
+        FOREIGN KEY (booking_id) REFERENCES {$wpdb->prefix}leanwi_event_booking(booking_id) ON DELETE CASCADE,
+        FOREIGN KEY (occurrence_id) REFERENCES {$wpdb->prefix}tec_occurrences(occurrence_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
     // SQL for creating leanwi_event_disclaimer table

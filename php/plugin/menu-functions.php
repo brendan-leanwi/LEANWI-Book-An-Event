@@ -337,19 +337,19 @@ function leanwi_delete_event_page() {
     // Sanitize and fetch the event_data_id from the URL
     $event_data_id = intval($_GET['event_data_id']);
     $data_table = $wpdb->prefix . 'leanwi_event_data';
-    $participant_table =  $wpdb->prefix . 'leanwi_event_participant';
+    $booking_table =  $wpdb->prefix . 'leanwi_event_booking';
 
-    $participant = $wpdb->get_row($wpdb->prepare("SELECT 1 FROM $participant_table WHERE event_data_id = %d", $event_data_id));
+    $booking = $wpdb->get_row($wpdb->prepare("SELECT 1 FROM $booking_table WHERE event_data_id = %d", $event_data_id));
 
-    if($participant){
-        echo '<div class="error"><p>This event could not be deleted as there are participants attending this event.</p></div>';
+    if($booking){
+        echo '<div class="error"><p>This event could not be deleted as there are bookings for this event.</p></div>';
     } else {
         /**************************************************************************************************
          * 
          * Also deletes on cascade from the following tables:
          *      leanwi_event_cost
          *      leanwi_event_disclaimer
-         *  (would do participant too but we're checking for that above)
+         *  (would do booking too but we're checking for that above)
          **************************************************************************************************/
         $wpdb->delete(
             $data_table,
@@ -560,7 +560,7 @@ function leanwi_add_event_page() {
                 </tr>
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
-                    <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /></td>
+                    <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /> Enter 0 (zero) to indicate unlimited capacity.</td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>
@@ -882,7 +882,7 @@ function leanwi_edit_event_page() {
                 </tr>
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
-                    <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /></td>
+                    <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /> Enter 0 (zero) to indicate unlimited capacity.</td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>

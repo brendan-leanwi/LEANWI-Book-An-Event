@@ -3,6 +3,12 @@
 // Include WordPress environment
 require_once($_SERVER['DOCUMENT_ROOT'] . '/wp-load.php');
 
+// Verify nonce
+if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'leanwi_event_nonce')) {
+    echo json_encode(['success' => false, 'error' => 'Invalid or missing nonce']);
+    exit;
+}
+
 global $wpdb;
 
 // Get the event_data_id from the request
@@ -17,9 +23,17 @@ if ($event_data_id > 0) {
     ", $event_data_id);
 
     $disclaimers = $wpdb->get_results($sql);
+    
+    // Sanitize disclaimer text to prevent XSS (escape HTML tags)
+    $sanitized_disclaimers = [];
+    foreach ($disclaimers as $disclaimer) {
+        $sanitized_disclaimers[] = [
+            'disclaimer' => esc_html($disclaimer->disclaimer) // Prevent XSS
+        ];
+    }
 
     // Return disclaimers as JSON
-    echo json_encode(['disclaimers' => $disclaimers]);
+    echo json_encode(['disclaimers' => $sanitized_disclaimers]);
 } else {
     echo json_encode(['disclaimers' => []]); // Return empty if no event_data_id
 }

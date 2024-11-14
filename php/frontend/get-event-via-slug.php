@@ -2,6 +2,12 @@
 // Load WordPress environment
 require_once($_SERVER['DOCUMENT_ROOT'] . '/wp-load.php');
 
+// Verify nonce
+if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'leanwi_event_nonce')) {
+    echo json_encode(['success' => false, 'error' => 'Invalid or missing nonce']);
+    exit;
+}
+
 global $wpdb; // Access the global $wpdb object
 
 // verify the nonce before processing the rest of the form data
@@ -12,6 +18,11 @@ if (!isset($_GET['event_slug'])) {
 
 // Sanitize and validate inputs
 $event_slug = isset($_GET['event_slug']) ? sanitize_text_field($_GET['event_slug']) : '';
+
+if (empty($event_slug) || !preg_match('/^[a-z0-9-]+$/', $event_slug)) {
+    echo json_encode(['success' => false, 'error' => 'Invalid event slug']);
+    exit;
+}
 
 if (!empty($event_slug)) {
     // Get the prefixed table names
@@ -46,11 +57,11 @@ if (!empty($event_slug)) {
             ];
         }, $results);
 
-        echo json_encode(['success' => true, 'data' => $safe_results]); // Include success key
+        echo wp_json_encode(['success' => true, 'data' => $safe_results]); // Include success key
     } else {
-        echo json_encode(['error' => "LEANWI Event not found."]);
+        echo wp_json_encode(['error' => "LEANWI Event not found."]);
     }
 } else {
-    echo json_encode(['error' => "No Event Slug provided."]);
+    echo wp_json_encode(['error' => "No Event Slug provided."]);
 }
 ?>

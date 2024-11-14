@@ -1,3 +1,127 @@
+/* Container styling */
+.booking-choices-container,
+.existing-booking-container,
+#event-attendance {
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    background-color: #f9f9f9 !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+    margin-bottom: 20px !important;
+    margin-top: 20px !important;
+}
+
+/* Input fields */
+.existing-booking-container input[type="text"],
+#attendance-form input[type="text"],
+#attendance-form input[type="email"],
+#attendance-form input[type="phone"] {
+    width: 100% !important;
+    padding: 10px !important;
+    margin-top: 5px !important;
+    margin-bottom: 10px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important;
+    color: #333 !important;
+}
+
+/* Submit button */
+.booking-choices-container .find-button,
+.existing-booking-container .find-button,
+#attendance-form button[type="submit"] {
+    width: 100% !important;
+    padding: 12px !important;
+    background-color: #4CAF50 !important;
+    color: white !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: background-color 0.3s ease !important;
+}
+
+/* Button hover effect */
+#attendance-form button[type="submit"]:hover {
+    background-color: #45a049 !important;
+}
+
+
+/* Style the occurrences and costs containers */
+#occurrences-container,
+#costs-container {
+    margin: 10px 0;
+}
+
+/* Response message style */
+#response-message {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #d9534f; /* Default color, can change based on response */
+}
+
+/* Default submit button color */
+.existing-booking-container .find-button,
+#attendance-form button[type="submit"] {
+    background-color: #4CAF50 !important;
+    color: white !important;
+}
+
+/* Button hover effect */
+.existing-booking-container .find-button:hover,
+#attendance-form button[type="submit"]:hover {
+    background-color: #45a049 !important;
+}
+
+/* Specific styling for the delete button */
+.booking-choices-container #retrieve-booking,
+.existing-booking-container #delete-booking {
+    background-color: red !important;
+}
+
+/* Specific styling for the delete button */
+.booking-choices-container #retrieve-booking {
+    background-color: blue !important;
+}
+
+/* Button container alignment */
+.existing-booking-container .button-container {
+    display: flex;
+    gap: 10px;
+}
+
+/* Button container alignment */
+.existing-booking-container .button-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* Adjust button width */
+.booking-choices-container .find-button,
+.existing-booking-container .find-button {
+    width: 45% !important;
+    padding: 10px !important;
+    font-size: 16px !important;
+}
+
+/* Spacer for better readability */
+p {
+    margin: 5px 0;
+}
+
+/* Optional styling for disclaimer */
+#event-disclaimers {
+    margin-top: 10px;
+    font-style: italic;
+    color: #777;
+}
+
 /* Styling for the disclaimer table */
 .disclaimer-table {
     width: 100%;
@@ -18,3 +142,81 @@
 .disclaimer-table tr:not(.disclaimer-row) {
     height: 10px;
 }
+
+/* Styling for the occurrences button look */
+.occurrence-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.occurrence-button:hover {
+    background-color: #e0e0e0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.occurrence-checkbox {
+    margin-right: 10px;
+}
+
+.occurrence-info {
+    flex-grow: 1;
+}
+
+.participants {
+    color: red;
+    text-align: right;
+    font-size: 14px;
+    font-weight: normal;
+    margin-left: 20px;
+}
+
+/* Styling for the costs look */
+#costs-container {
+    margin-top: 20px;
+}
+
+.cost-item {
+    display: flex;
+    align-items: center;  /* Vertically center the content */
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.cost-name {
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 10px;  /* Space between cost name and amount */
+}
+
+.cost-amount {
+    color: green;
+    font-size: 14px;
+    margin-right: 10px;  /* Space between amount and input field */
+}
+
+.attending-input {
+    margin-left: 10px;
+    padding: 5px;
+    width: 50px;
+    text-align: center;
+}
+
+label {
+    margin-right: 5px;  /* Space between label and input */
+}
+

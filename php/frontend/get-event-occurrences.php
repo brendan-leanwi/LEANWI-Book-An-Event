@@ -3,6 +3,12 @@
 // Include WordPress environment
 require_once($_SERVER['DOCUMENT_ROOT'] . '/wp-load.php');
 
+// Verify nonce
+if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'leanwi_event_nonce')) {
+    echo json_encode(['success' => false, 'error' => 'Invalid or missing nonce']);
+    exit;
+}
+
 global $wpdb;
 
 // Get the event_data_id from the request
@@ -11,17 +17,23 @@ $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
 if ($post_id > 0) {
     // Get the prefixed table names
     $occurrences_table = $wpdb->prefix . 'tec_occurrences';
-    $participant_table = $wpdb->prefix . 'leanwi_event_participant';
-    // Fetch occurrences associated with the post_id
+    $booking_occurrences_table = $wpdb->prefix . 'leanwi_event_booking_occurrences';
+
+    // Get current local date and time
+    $current_datetime = current_time('mysql'); // Uses WordPress's `current_time` to get local time in MySQL format
+
+    // Fetch occurrences associated with the post_id that are in the future
     $sql = $wpdb->prepare("
-        SELECT o.occurrence_id, o.start_date, o.end_date, IFNULL(SUM(p.total_number_of_participants), 0) AS total_participants
+        SELECT o.occurrence_id, o.start_date, o.end_date, IFNULL(SUM(bo.number_of_participants), 0) AS total_participants
         FROM $occurrences_table o
-        LEFT JOIN $participant_table p ON o.occurrence_id = p.event_occurrence_id
+        LEFT JOIN $booking_occurrences_table bo ON o.occurrence_id = bo.occurrence_id
         WHERE o.post_id = %d
+        AND o.start_date > %s
         GROUP BY o.occurrence_id, o.start_date, o.end_date
-    ", $post_id);
+    ", $post_id, $current_datetime);
 
     $occurrences = $wpdb->get_results($sql, ARRAY_A);
+
 
     if (!empty($occurrences)) {
         

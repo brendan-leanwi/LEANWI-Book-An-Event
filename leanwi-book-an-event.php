@@ -36,12 +36,24 @@ function leanwi_event_enqueue_scripts() {
             filemtime(plugin_dir_path(__FILE__) . 'js/event-booking.js'),
             true
         );
+        
         wp_enqueue_script('event-booking-js');
+
+        wp_localize_script('event-booking-js', 'leanwiVars', [
+            'ajax_nonce' => wp_create_nonce('leanwi_event_nonce')
+        ]);
     }
 }
 add_action('wp_enqueue_scripts', __NAMESPACE__ . '\\leanwi_event_enqueue_scripts');
 
 function enqueue_leanwi_event_custom_styles() {
-    wp_enqueue_style('leanwi_event_custom-calendar-style', plugin_dir_url(__FILE__) . 'css/event-style.css');
+    if (is_singular() && has_shortcode(get_post()->post_content, 'leanwi_event_details')) {
+        wp_enqueue_style(
+            'leanwi_event_custom-calendar-style',
+            plugin_dir_url(__FILE__) . 'css/event-style.css',
+            array(), // No dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'css/event-style.css') // Version control for cache-busting
+        );
+    }
 }
 add_action('wp_enqueue_scripts', __NAMESPACE__ . '\\enqueue_leanwi_event_custom_styles');
