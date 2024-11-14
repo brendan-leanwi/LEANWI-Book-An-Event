@@ -35,6 +35,8 @@ function leanwi_event_create_tables() {
         capacity INT NOT NULL,
         category_id INT NOT NULL,
         audience_id INT NOT NULL,
+        booking_before_hours INT DEFAULT 0,
+        cancellation_before_hours INT DEFAULT 0,
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (category_id) REFERENCES  {$wpdb->prefix}leanwi_event_category(category_id),
         FOREIGN KEY (audience_id) REFERENCES  {$wpdb->prefix}leanwi_event_audience(audience_id)

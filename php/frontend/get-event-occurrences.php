@@ -18,6 +18,7 @@ if ($post_id > 0) {
     // Get the prefixed table names
     $occurrences_table = $wpdb->prefix . 'tec_occurrences';
     $booking_occurrences_table = $wpdb->prefix . 'leanwi_event_booking_occurrences';
+    $event_data_table = $wpdb->prefix . 'leanwi_event_data';
 
     // Get current local date and time
     $current_datetime = current_time('mysql'); // Uses WordPress's `current_time` to get local time in MySQL format
@@ -27,10 +28,12 @@ if ($post_id > 0) {
         SELECT o.occurrence_id, o.start_date, o.end_date, IFNULL(SUM(bo.number_of_participants), 0) AS total_participants
         FROM $occurrences_table o
         LEFT JOIN $booking_occurrences_table bo ON o.occurrence_id = bo.occurrence_id
+        LEFT JOIN $event_data_table ed ON o.post_id = ed.post_id
         WHERE o.post_id = %d
         AND o.start_date > %s
+        AND TIMESTAMPDIFF(HOUR, %s, o.start_date) >= ed.booking_before_hours
         GROUP BY o.occurrence_id, o.start_date, o.end_date
-    ", $post_id, $current_datetime);
+    ", $post_id, $current_datetime, $current_datetime);
 
     $occurrences = $wpdb->get_results($sql, ARRAY_A);
 

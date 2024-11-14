@@ -378,6 +378,8 @@ function leanwi_add_event_page() {
             $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 1;
             $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
             $participation_rule = esc_html($_POST['participation_rule']);
+            $booking_before_hours = isset($_POST['booking_before_hours']) ? intval($_POST['booking_before_hours']) : 0;
+            $cancellation_before_hours = isset($_POST['cancellation_before_hours']) ? intval($_POST['cancellation_before_hours']) : 0;
 
             // Insert the new event into the database
             $inserted = $wpdb->insert(
@@ -390,6 +392,8 @@ function leanwi_add_event_page() {
                     'capacity' => $capacity,
                     'category_id' => $category_id,
                     'audience_id' => $audience_id,
+                    'booking_before_hours' => $booking_before_hours,
+                    'cancellation_before_hours' => $cancellation_before_hours,
                 )
             );
 
@@ -449,7 +453,9 @@ function leanwi_add_event_page() {
         'capacity' => '',
         'category' => '',
         'audience' => '',
-        'participation_rule' => 'any'
+        'participation_rule' => 'any',
+        'cancellation_before_hours' => '0',
+        'booking_before_hours' => '0'
     ];
 
     // Fetch unused events so that latest events end up at the top
@@ -561,6 +567,14 @@ function leanwi_add_event_page() {
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
                     <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /> Enter 0 (zero) to indicate unlimited capacity.</td>
+                </tr>
+                <tr>
+                    <th><label for="booking_before_hours">Hours away from event that a booking is allowed</label></th>
+                    <td><input type="number" id="booking_before_hours" name="booking_before_hours" value="<?php echo esc_attr($event->booking_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be placed up to the time of the event.</td>
+                </tr>
+                <tr>
+                    <th><label for="cancellation_before_hours">Hours away from event that a cancellation is allowed</label></th>
+                    <td><input type="number" id="cancellation_before_hours" name="cancellation_before_hours" value="<?php echo esc_attr($event->cancellation_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be cancelled up to the time of the event.</td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>
@@ -721,6 +735,8 @@ function leanwi_edit_event_page() {
             $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
             $historic = isset($_POST['historic']) ? 1 : 0;
             $participation_rule = esc_html($_POST['participation_rule']);
+            $booking_before_hours = isset($_POST['booking_before_hours']) ? intval($_POST['booking_before_hours']) : 0;
+            $cancellation_before_hours = isset($_POST['cancellation_before_hours']) ? intval($_POST['cancellation_before_hours']) : 0;
 
             // Update the event in the database
             $updated = $wpdb->update(
@@ -734,6 +750,8 @@ function leanwi_edit_event_page() {
                     'audience_id' => $audience_id,
                     'historic' => $historic,
                     'participation_rule' => $participation_rule,
+                    'booking_before_hours' => $booking_before_hours,
+                    'cancellation_before_hours' => $cancellation_before_hours,
                 ),
                 array('event_data_id' => $event_data_id)
             );
@@ -883,6 +901,14 @@ function leanwi_edit_event_page() {
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
                     <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /> Enter 0 (zero) to indicate unlimited capacity.</td>
+                </tr>
+                <tr>
+                    <th><label for="booking_before_hours">Hours away from event that a booking is allowed</label></th>
+                    <td><input type="number" id="booking_before_hours" name="booking_before_hours" value="<?php echo esc_attr($event->booking_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be placed up to the time of the event.</td>
+                </tr>
+                <tr>
+                    <th><label for="cancellation_before_hours">Hours away from event that a cancellation is allowed</label></th>
+                    <td><input type="number" id="cancellation_before_hours" name="cancellation_before_hours" value="<?php echo esc_attr($event->cancellation_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be cancelled up to the time of the event.</td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>
