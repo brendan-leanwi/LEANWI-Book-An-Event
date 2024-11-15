@@ -182,6 +182,14 @@ p {
     margin-left: 20px;
 }
 
+.user-message {
+    color: blue;
+    text-align: right;
+    font-size: 14px;
+    font-weight: normal;
+    margin-left: 20px;
+}
+
 /* Styling for the costs look */
 #costs-container {
     margin-top: 20px;

@@ -5,6 +5,7 @@ require_once($_SERVER['DOCUMENT_ROOT'] . '/wp-load.php');
 global $wpdb; // Access the global $wpdb object
 
 // verify the nonce before processing the rest of the form data
+
 if (!isset($_POST['fetch_existing_event_nonce']) || !wp_verify_nonce($_POST['fetch_existing_event_nonce'], 'fetch_existing_event_action')) {
     echo json_encode(['success' => false, 'error' => 'Nonce verification failed.']);
     exit;
@@ -14,17 +15,24 @@ if (!isset($_POST['fetch_existing_event_nonce']) || !wp_verify_nonce($_POST['fet
 $booking_ref = isset($_POST['booking_ref']) ? sanitize_text_field($_POST['booking_ref']) : '';
 $event_data_id = isset($_POST['event_data_id']) ? intval($_POST['event_data_id']) : 0;
 
+//$booking_ref = isset($_GET['booking_ref']) ? sanitize_text_field($_GET['booking_ref']) : '';
+//$event_data_id = isset($_GET['event_data_id']) ? intval($_GET['event_data_id']) : 0;
+
 if (!empty($booking_ref)) {
     // Get the prefixed table names
+    $event_data_table = $wpdb->prefix . 'leanwi_event_data';
     $booking_table = $wpdb->prefix . 'leanwi_event_booking';
     $cost_table = $wpdb->prefix . 'leanwi_event_cost';
     $occurrences_table = $wpdb->prefix . 'tec_occurrences';
     $booking_costs_table = $wpdb->prefix . 'leanwi_event_booking_costs';
     $booking_occurrences_table = $wpdb->prefix . 'leanwi_event_booking_occurrences';
+    // Get current local date and time
+    $current_datetime = current_time('mysql'); // Uses WordPress's `current_time` to get local time in MySQL format
 
     $booking_results = [];
     $cost_results = [];
-    $occurrence_results = [];
+    $future_occurrence_results = [];
+    $past_occurrence_results = [];
 
     // Prepare SQL statement using $wpdb to get booking and user details
     $sql = $wpdb->prepare("
@@ -52,10 +60,11 @@ if (!empty($booking_ref)) {
                     'email' => sanitize_email($result['email']),
                     'phone' => esc_html($result['phone']),
                     'total_participants' => intval($result['total_participants']),
+                    'historic' => intval($result['historic']),
                 ];
             }, $results);
 
-            // Get the Occurrence data for the Booking
+            // Get the Cost data for the Booking
             $sql = $wpdb->prepare("
                 SELECT bct.*, c.cost_name, c.cost_amount
                 FROM $booking_costs_table bct
@@ -79,20 +88,23 @@ if (!empty($booking_ref)) {
                 }, $costs);
             }
 
-            // Get the Occurrence data for the Booking
+            // Get the Future Occurrence data for the Booking
             $sql = $wpdb->prepare("
                 SELECT bot.*, o.start_date, o.end_date
                 FROM $booking_occurrences_table bot
                 JOIN $occurrences_table o ON bot.occurrence_id = o.occurrence_id
-                WHERE bot.booking_id = %d
-            ", $booking_id);
+                LEFT JOIN $event_data_table ed ON o.post_id = ed.post_id
+                WHERE bot.booking_id = %d          
+                AND o.start_date > %s
+                AND TIMESTAMPDIFF(HOUR, %s, o.start_date) >= ed.booking_before_hours
+            ", $booking_id, $current_datetime, $current_datetime);
 
             // Execute the query
-            $occurrences = $wpdb->get_results($sql, ARRAY_A);
+            $future_occurrences = $wpdb->get_results($sql, ARRAY_A);
 
-            if (!empty($occurrences)) {
+            if (!empty($future_occurrences)) {
                 // Sanitize output data with specific handling
-                $occurrence_results = array_map(function($result) use ($booking_id) {
+                $future_occurrence_results = array_map(function($result) use ($booking_id) {
                     return [
                         'booking_id' => $booking_id,
                         'occurrence_id' => intval($result['occurrence_id']),
@@ -100,14 +112,44 @@ if (!empty($booking_ref)) {
                         'start_date' => esc_html($result['start_date']), 
                         'end_date' => esc_html($result['end_date']), 
                     ];
-                }, $occurrences);
+                }, $future_occurrences);
+            }
+
+            // Get the Past Occurrence data for the Booking
+            $sql = $wpdb->prepare("
+                SELECT bot.*, o.start_date, o.end_date
+                FROM $booking_occurrences_table bot
+                JOIN $occurrences_table o ON bot.occurrence_id = o.occurrence_id
+                LEFT JOIN $event_data_table ed ON o.post_id = ed.post_id
+                WHERE bot.booking_id = %d
+                AND (
+                    o.start_date <= %s
+                    OR TIMESTAMPDIFF(HOUR, %s, o.start_date) < ed.booking_before_hours
+                )
+            ", $booking_id, $current_datetime, $current_datetime);
+
+            // Execute the query
+            $past_occurrences = $wpdb->get_results($sql, ARRAY_A);
+
+            if (!empty($past_occurrences)) {
+                // Sanitize output data with specific handling
+                $past_occurrence_results = array_map(function($result) use ($booking_id) {
+                    return [
+                        'booking_id' => $booking_id,
+                        'occurrence_id' => intval($result['occurrence_id']),
+                        'number_of_participants' => intval($result['number_of_participants']),
+                        'start_date' => esc_html($result['start_date']), 
+                        'end_date' => esc_html($result['end_date']), 
+                    ];
+                }, $past_occurrences);
             }
 
             echo json_encode([
                 'success' => true,
                 'data' => $booking_results, 
                 'costs' => $cost_results, 
-                'occurrences' => $occurrence_results
+                'future_occurrences' => $future_occurrence_results,
+                'past_occurrences' => $past_occurrence_results
             ]);
         }
     } else {

@@ -1,6 +1,9 @@
 let totalCost = 0;
 let totalCostDisplay;
 let eventSlug;
+let globalEventData;
+let usedHistoricCosts = [];
+let hasFutureOccurrences = true;
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -42,9 +45,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
+/**************************************************************************************************
+ * SIGNUP FOR THIS EVENT
+ * *************************************************************************************************/
 document.getElementById('booking-choices').addEventListener('submit', function(event) {
     event.preventDefault();
 
+    existingRecord = false;
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
     // Fetch event data
@@ -67,32 +74,8 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
                             document.getElementById('sold-out').style.display = 'block';
                             document.getElementById('event-attendance').style.display = 'none';
                         } else {
-                            // Show RSVP form and continue
+                            createFormFields(event);
                             document.getElementById('event-attendance').style.display = 'block';
-                            const hiddenDiv = document.getElementById('hidden_event_data');
-        
-                            // Create hidden inputs for each event property
-                            const fields = {
-                                'event_data_id': event.event_data_id,
-                                'post_id': event.post_id,
-                                'event_url': event.event_url,
-                                'event_image': event.event_image,
-                                'capacity': event.capacity,
-                                'category_id': event.category_id,
-                                'audience_id': event.audience_id,
-                                'historic': event.historic,
-                                'participation_rule': event.participation_rule
-                            };
-        
-                            for (const [key, value] of Object.entries(fields)) {
-                                const input = document.createElement('input');
-                                input.type = 'hidden';
-                                input.name = key;
-                                input.value = value;
-                                hiddenDiv.appendChild(input);
-                            }
-        
-                            displayParticipationMessage(event.participation_rule);
                         }
                     })
                     .then(() => {
@@ -160,20 +143,24 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
         
                                 // Loop through each cost and create the display elements
                                 data.event_costs.forEach(cost => {
-                                    // Create a container for each cost item
-                                    let costElement = document.createElement('div');
-                                    costElement.classList.add('cost-item'); // Add a class for styling
-        
-                                    // Create the content of each cost item
-                                    costElement.innerHTML = `
-                                        <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
-                                        <div class="cost-amount">$${cost.cost_amount}</div>
-                                        <label for="attending-${cost.cost_id}">Number Attending:</label>
-                                        <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="0" class="attending-input">
-                                    `;
-        
-                                    // Append the cost element to the container
-                                    costsContainer.appendChild(costElement);
+                                    
+                                    if(cost.historic == 0){ //For new bookings only show costs that are not historic
+                                        
+                                        // Create a container for each cost item
+                                        let costElement = document.createElement('div');
+                                        costElement.classList.add('cost-item'); // Add a class for styling
+            
+                                        // Create the content of each cost item
+                                        costElement.innerHTML = `
+                                            <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
+                                            <div class="cost-amount">$${cost.cost_amount}</div>
+                                            <label for="attending-${cost.cost_id}">Number Attending:</label>
+                                            <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="0" class="attending-input">
+                                        `;
+            
+                                        // Append the cost element to the container
+                                        costsContainer.appendChild(costElement);
+                                    }
                                 });
         
                                 // Create a div to display the total cost
@@ -187,63 +174,7 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
                             });
                     })
                     .then(() => {
-                        // Fetch disclaimers last
-                        const disclaimersDiv = document.getElementById('event-disclaimers');
-                        return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-disclaimers.php?event_data_id=${event.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
-                            .then(response => response.json())
-                            .then(disclaimerData => {
-                                if (disclaimerData.disclaimers && disclaimerData.disclaimers.length > 0) {
-                                    disclaimersDiv.innerHTML = ''; // Clear existing disclaimers
-        
-                                    // Create the table
-                                    const table = document.createElement('table');
-                                    table.classList.add('disclaimer-table'); // Add CSS class for styling
-        
-                                    disclaimerData.disclaimers.forEach((disclaimer, index) => {
-                                        // Row for disclaimer
-                                        const row = document.createElement('tr');
-                                        row.classList.add('disclaimer-row');
-        
-                                        // Cell for checkbox
-                                        const checkboxCell = document.createElement('td');
-                                        const checkbox = document.createElement('input');
-                                        checkbox.type = 'checkbox';
-                                        checkbox.id = `disclaimer-${index}`;
-                                        checkbox.name = `disclaimer-${index}`;
-                                        checkbox.required = true; // Set the checkbox as required
-                                        checkboxCell.appendChild(checkbox);
-        
-                                        // Cell for disclaimer text
-                                        const textCell = document.createElement('td');
-                                        const label = document.createElement('label');
-                                        label.setAttribute('for', checkbox.id);
-                                        label.textContent = disclaimer.disclaimer;
-                                        textCell.appendChild(label);
-        
-                                        // Append cells to row
-                                        row.appendChild(checkboxCell);
-                                        row.appendChild(textCell);
-        
-                                        // Add row to table
-                                        table.appendChild(row);
-        
-                                        // Insert a gap row for spacing (empty row)
-                                        const gapRow = document.createElement('tr');
-                                        const gapCell = document.createElement('td');
-                                        gapCell.colSpan = 2; // Span across both columns
-                                        gapRow.appendChild(gapCell);
-                                        table.appendChild(gapRow);
-                                    });
-        
-                                    disclaimersDiv.appendChild(table);
-                                } else {
-                                    disclaimersDiv.style.display = 'none';
-                                    console.log('No disclaimers found for this event.');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching disclaimers:', error);
-                            });
+                        displayDisclaimers(event);
                     });
             }
         })
@@ -255,6 +186,11 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
     document.getElementById('event-attendance').style.display = 'block';
     document.getElementById('existing-booking-container').style.display = 'none';
 
+    addListeners();
+
+});
+
+function addListeners() {
     // Event listener for input changes to update the total cost
     document.querySelector('#costs-container').addEventListener('input', function (e) {
         if (e.target.matches('.attending-input')) {
@@ -269,15 +205,39 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
         }
     });
 
+    // Event Listener for main form save
     document.getElementById('attendance-form').addEventListener('submit', function(event) {
         event.preventDefault();
     
+        // Check if any historic costs in `usedHistoricCosts` have attendingValue > 0
+        const problematicCost = usedHistoricCosts.find(cost => {
+            // Get the current attending input value from the DOM for this cost
+            const inputElement = document.querySelector(`.attending-input[name="attending-${cost.cost_id}"]`);
+            const currentAttendingValue = parseInt(inputElement?.value, 10) || 0;
+            return currentAttendingValue > 0;
+        });
+
+        if (problematicCost) {
+            const costName = problematicCost.cost_name;
+            alert(`You cannot save because the historic cost "${costName}" is still being used.`);
+            e.preventDefault(); // Stop the form submission
+            return false; // Prevent further processing
+        }
+        
         const eventCapacity = document.querySelector('#hidden_event_data input[name="capacity"]'); // <= 0 capacity implies unlimited attendance
 
         // Get form data and nonce
         const formData = new FormData(this);
-        formData.append('booking_reference', generateBookingReference()); // Generate booking reference
         formData.append('submit_event_nonce', document.querySelector('#submit_event_nonce').value);
+
+        if(existingRecord){
+            formData.append('existing_record', 'true');
+            formData.append('existing_booking_reference', document.getElementById('booking_reference').value); // Pass the booking ref from the hidden element
+        } else {
+            formData.append('existing_record', 'false');
+            formData.append('existing_booking_reference', '');
+        }
+        formData.append('new_booking_reference', generateBookingReference()); // Pass a generated booking reference
         
         // Retrieve the event_data_id from the hidden input field in hidden_event_data div
         const eventDataId = document.querySelector('#hidden_event_data input[name="event_data_id"]');
@@ -290,7 +250,6 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
         const costs = [];
         document.querySelectorAll('.cost-item').forEach(function(item) {
             const costId = item.querySelector('.cost-name').dataset.costId; // Retrieve cost_id from data attribute
-            //const numberOfParticipants = item.querySelector('.attending-input').value || 0;
             const numberOfParticipants = parseInt(item.querySelector('.attending-input').value, 10) || 0;
             totalParticipants += numberOfParticipants;
             costs.push({ cost_id: costId, number_of_participants: numberOfParticipants });
@@ -346,7 +305,7 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                document.getElementById('response-message').textContent = 'Booking successful!';
+                document.getElementById('response-message').textContent = data.message;
             } else {
                 document.getElementById('response-message').textContent = 'Booking failed: ' + data.message;
             }
@@ -355,7 +314,7 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
             console.error('Error:', error);
         });
     });
-});
+}
 
 /*****************************************************************************************
 * FUNCTIONALITY FOR DISPLAYING AN EXISTING BOOKING
@@ -364,6 +323,7 @@ let existingRecord = false;
 const retrieveBookingForm = document.querySelector('#existing-booking');
 const findButton = retrieveBookingForm.querySelector('.find-button[type="submit"]');
 
+// Setting up the page for showing an existing booking
 function showExistingBookingContainer() {
     const existingBookingContainer = document.getElementById('existing-booking-container');
     if (existingBookingContainer) {
@@ -384,30 +344,7 @@ function showExistingBookingContainer() {
         .then(data => {
             if (data.success && data.data.length > 0) {
                 const event = data.data[0];
-                const hiddenDiv = document.getElementById('hidden_event_data');
-
-                // Create hidden inputs for each event property
-                const fields = {
-                    'event_data_id': event.event_data_id,
-                    'post_id': event.post_id,
-                    'event_url': event.event_url,
-                    'event_image': event.event_image,
-                    'capacity': event.capacity,
-                    'category_id': event.category_id,
-                    'audience_id': event.audience_id,
-                    'historic': event.historic,
-                    'participation_rule': event.participation_rule
-                };
-
-                for (const [key, value] of Object.entries(fields)) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = key;
-                    input.value = value;
-                    hiddenDiv.appendChild(input);
-                }
-
-                displayParticipationMessage(event.participation_rule);
+                createFormFields(event);
             }
         })
         .catch(error => console.error('Error fetching event details:', error))
@@ -423,6 +360,7 @@ document.getElementById('retrieve-booking').addEventListener('click', function(e
 
 });
 
+// Retrieve Booking click to fetch the existing booking and display
 retrieveBookingForm.addEventListener('submit', function (event) {
     event.preventDefault();
     existingRecord = true;
@@ -431,7 +369,6 @@ retrieveBookingForm.addEventListener('submit', function (event) {
     // Prepare form data
     const formData = new FormData(this);
     const eventDataId = document.querySelector('#hidden_event_data input[name="event_data_id"]');
-    console.log('event_data_id', eventDataId);
     if (eventDataId) {
         formData.append('event_data_id', eventDataId.value);
     }
@@ -455,13 +392,16 @@ retrieveBookingForm.addEventListener('submit', function (event) {
     })
     .then(data => {
         if (data.success) {
-            const booking = data.data[0]; // Assuming single booking
-
             console.log('Booking data:', data);
+            event_booking = data.data[0];
+
             // Populate form fields and display booking information
-            //populateBookingFormFields(booking);
-            
-            //handleOccurrences(booking); // ????
+            document.getElementById('event-attendance').style.display = 'block';
+            populateBookingFormFields(event_booking);          
+            displayOccurrences(event_booking, data.future_occurrences, data.past_occurrences); 
+            displayCosts(event_booking, data.costs);
+            displayDisclaimers(event_booking, globalEventData);
+            addListeners();
         } else {
             alert(data.error || 'Booking retrieval unsuccessful.');
         }
@@ -477,6 +417,284 @@ retrieveBookingForm.addEventListener('submit', function (event) {
     });
 });
 
+function populateBookingFormFields(booking) {
+    // Check if booking data exists
+    if (booking) {
+        // Populate the form fields with booking details
+        document.getElementById('name').value = booking.name || '';
+        document.getElementById('email').value = booking.email || '';
+        document.getElementById('phone').value = booking.phone || '';
+        document.getElementById('booking_reference').value = booking.booking_reference || '';
+    }
+}
+
+function displayCosts(booking, costs) { // `costs` contains previously booked costs with `cost_id` and `number_of_participants`
+    let costsContainer = document.querySelector('#costs-container');
+    costsContainer.innerHTML = ''; // Clear any previous content
+
+    // Fetch event costs
+    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-costs.php?event_data_id=${globalEventData.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+    .then(response => response.json())
+    .then(data => {
+        let costsContainer = document.querySelector('#costs-container');
+        costsContainer.innerHTML = ''; // Clear any previous content
+
+        const bookedCosts = costs.reduce((map, cost) => {
+            map[cost.cost_id] = cost.number_of_participants;
+            return map;
+        }, {});
+
+        // Loop through each cost and create the display elements
+        data.event_costs.forEach(cost => {
+            if (cost.historic === 0 || (cost.historic === 1 && bookedCosts[cost.cost_id] > 0)) { // Costs are not historic or are historic but we have attendance in the booking for that cost
+                // Create a container for each cost item
+                let costElement = document.createElement('div');
+                costElement.classList.add('cost-item'); // Add a class for styling
+
+                // Determine the initial value for "Number Attending"
+                let attendingValue = bookedCosts[cost.cost_id] || 0; // Use booked number or default to 0
+
+                // Create the content of each cost item
+                costElement.innerHTML = `
+                    <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
+                    <div class="cost-amount">$${cost.cost_amount}</div>
+                    <label for="attending-${cost.cost_id}">Number Attending:</label>
+                    <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="${attendingValue}" class="attending-input">
+                `;
+
+                if(cost.historic === 1 && attendingValue > 0){
+                    costElement.innerHTML += `<div class="user-message">
+                                                (historic cost - please remove from attendance)
+                                            </div>
+                                            `;
+                    //Save cost information to a global array to be checked when save main form.
+                    usedHistoricCosts.push(cost);
+
+                }
+                //Disable the input box of this is an historic booking
+                const inputBox = costElement.querySelector(`#attending-${cost.cost_id}`);
+                inputBox.disabled = booking.historic == 1;
+
+                // Append the cost element to the container
+                costsContainer.appendChild(costElement);
+            } 
+        });
+
+        // Create a div to display the total cost
+        totalCostDisplay = document.createElement('div');
+        totalCostDisplay.id = 'total-cost-display';
+        costsContainer.appendChild(totalCostDisplay);
+        
+        updateTotalCost();
+    })
+    .catch(error => {
+        console.error('Error fetching costs:', error);
+    });
+
+}
+
+function displayOccurrences(booking, futureOccurrences, pastOccurrences) {
+    let occurrencesContainer = document.querySelector('#occurrences-container');
+    occurrencesContainer.innerHTML = ''; // Clear any previous content
+
+    // Display past occurrences as checked and disabled
+    pastOccurrences.forEach(occurrence => {
+        let startDate = new Date(occurrence.start_date);
+        let endDate = new Date(occurrence.end_date);
+
+        // Format the date and time
+        let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+        // Create a display element for each past occurrence
+        let occurrenceElement = document.createElement('div');
+        occurrenceElement.classList.add('occurrence-button');
+
+        occurrenceElement.innerHTML = `
+            <input type="checkbox" class="occurrence-checkbox" value="${occurrence.occurrence_id}" checked disabled>
+            <div class="occurrence-info">
+                ${formattedStartDate} to ${formattedEndDate}
+            </div>
+            <div class="user-message">
+                (No updates possible - Event passed or too close)
+            </div>
+        `;
+
+        occurrencesContainer.appendChild(occurrenceElement);
+    });
+
+    hasFutureOccurrences = false;
+    if(booking.historic == 0) { //Only display future occurrences if booking is not historic
+        // Fetch event occurrences and display possible future occurrences
+        fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+            .then(response => response.json())
+            .then(data => {
+                data.event_occurrences.forEach(occurrence => {
+                    hasFutureOccurrences = true;
+                    console.log('hasFutureOccurrences = true');
+                    let startDate = new Date(occurrence.start_date);
+                    let endDate = new Date(occurrence.end_date);
+
+                    // Format the date and time
+                    let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                    let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                    // Calculate spots available
+                    let spotsAvailable = globalEventData.capacity - occurrence.total_participants;
+                    let checkboxDisabled = globalEventData.capacity > 0 && spotsAvailable === 0 ? 'disabled' : '';
+
+                    // Check if this occurrence is in futureOccurrences
+                    let isChecked = futureOccurrences.some(futureOccurrence => futureOccurrence.occurrence_id === occurrence.occurrence_id) ? 'checked' : '';
+
+                    // Create a display element for each future occurrence
+                    let occurrenceElement = document.createElement('div');
+                    occurrenceElement.classList.add('occurrence-button');
+
+                    occurrenceElement.innerHTML = `
+                        <input type="checkbox" class="occurrence-checkbox" value="${occurrence.occurrence_id}" ${checkboxDisabled} ${isChecked}>
+                        <div class="occurrence-info">
+                            ${formattedStartDate} to ${formattedEndDate}
+                        </div>
+                    `;
+
+                    if (globalEventData.capacity > 0) {
+                        occurrenceElement.innerHTML += `
+                            <div class="participants">
+                                (${spotsAvailable} Spots Available)
+                            </div>
+                        `;
+                    } else {
+                        occurrenceElement.innerHTML += `
+                            <div class="participants">
+                                (Unlimited Spots Available)
+                            </div>
+                        `;
+                    }
+
+                    occurrencesContainer.appendChild(occurrenceElement);
+                });
+
+                adjustBookingButton();
+
+            })
+            .catch(error => {
+                console.error('Error fetching occurrences:', error);
+            });
+    } else {
+        adjustBookingButton();
+    }
+
+}
+
+function displayDisclaimers(booking, event) {
+    // Fetch disclaimers last
+    const disclaimersDiv = document.getElementById('event-disclaimers');
+    return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-disclaimers.php?event_data_id=${event.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+        .then(response => response.json())
+        .then(disclaimerData => {
+            if (disclaimerData.disclaimers && disclaimerData.disclaimers.length > 0) {
+                disclaimersDiv.innerHTML = ''; // Clear existing disclaimers
+
+                // Create the table
+                const table = document.createElement('table');
+                table.classList.add('disclaimer-table'); // Add CSS class for styling
+
+                disclaimerData.disclaimers.forEach((disclaimer, index) => {
+                    // Row for disclaimer
+                    const row = document.createElement('tr');
+                    row.classList.add('disclaimer-row');
+
+                    // Cell for checkbox
+                    const checkboxCell = document.createElement('td');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `disclaimer-${index}`;
+                    checkbox.name = `disclaimer-${index}`;
+                    checkbox.required = true; // Set the checkbox as required
+
+                    // Check the checkbox if booking.historic is 1
+                    if (booking.historic === 1) {
+                        checkbox.checked = true;
+                    }
+                    
+                    checkboxCell.appendChild(checkbox);
+
+                    // Cell for disclaimer text
+                    const textCell = document.createElement('td');
+                    const label = document.createElement('label');
+                    label.setAttribute('for', checkbox.id);
+                    label.textContent = disclaimer.disclaimer;
+                    textCell.appendChild(label);
+
+                    // Append cells to row
+                    row.appendChild(checkboxCell);
+                    row.appendChild(textCell);
+
+                    // Add row to table
+                    table.appendChild(row);
+
+                    // Insert a gap row for spacing (empty row)
+                    const gapRow = document.createElement('tr');
+                    const gapCell = document.createElement('td');
+                    gapCell.colSpan = 2; // Span across both columns
+                    gapRow.appendChild(gapCell);
+                    table.appendChild(gapRow);
+                });
+
+                disclaimersDiv.appendChild(table);
+            } else {
+                disclaimersDiv.style.display = 'none';
+                console.log('No disclaimers found for this event.');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching disclaimers:', error);
+        });
+}
+
+// Function to adjust the button label and state
+function adjustBookingButton() {
+    const submitButton = document.querySelector('#attendance-form button[type="submit"]');
+    if (submitButton) {
+        if (!hasFutureOccurrences) {
+            // Disable the button and set the message for past bookings
+            submitButton.disabled = true;
+            submitButton.textContent = 'Past Booking - No updates to booking possible';
+        } else {
+            // Enable the button and adjust text based on `existingRecord`
+            submitButton.disabled = false;
+            submitButton.textContent = existingRecord ? 'Update Event Booking' : 'Book Event';
+        }
+    }
+}
+
+function createFormFields(event) {
+    globalEventData = event;
+    const hiddenDiv = document.getElementById('hidden_event_data');
+
+    // Create hidden inputs for each event property
+    const fields = {
+        'event_data_id': event.event_data_id,
+        'post_id': event.post_id,
+        'event_url': event.event_url,
+        'event_image': event.event_image,
+        'capacity': event.capacity,
+        'category_id': event.category_id,
+        'audience_id': event.audience_id,
+        'historic': event.historic,
+        'participation_rule': event.participation_rule
+    };
+
+    for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        hiddenDiv.appendChild(input);
+    }
+
+    displayParticipationMessage(event.participation_rule);
+}
 
 // Function to get selected occurrences count
 function getSelectedOccurrencesCount() {
@@ -494,6 +712,10 @@ function updateTotalCost() {
         const attending = parseInt(costItem.querySelector('.attending-input').value, 10) || 0;
         totalCost += costAmount * attending;
         totalAttending += attending;  // Sum the total attendees
+        // Retrieve and log the data-cost-id
+        //const costId = costItem.querySelector('.cost-name').getAttribute('data-cost-id');
+        //console.log('Cost ID:', costId, ' Amount:', costAmount, ' Attending:', attending);
+
     });
 
     // Get the number of selected occurrences
@@ -556,9 +778,9 @@ function applyParticipationRule(participationRule) {
         });
     } else if (participationRule === 'any') {
         // Allow normal behavior (no special logic needed)
-        checkboxes.forEach(checkbox => {
-            checkbox.disabled = false;
-        });
+        //checkboxes.forEach(checkbox => {
+        //    checkbox.disabled = false;
+        //});
     }
 }
 

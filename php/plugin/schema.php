@@ -48,6 +48,7 @@ function leanwi_event_create_tables() {
         event_data_id INT NOT NULL,
         cost_name VARCHAR(50) NOT NULL,
         cost_amount DECIMAL(10, 2) NOT NULL,
+        historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
@@ -60,6 +61,7 @@ function leanwi_event_create_tables() {
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         total_participants INT NOT NULL,
+        historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 

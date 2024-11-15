@@ -756,32 +756,44 @@ function leanwi_edit_event_page() {
                 array('event_data_id' => $event_data_id)
             );
 
-            // Handle updating or deleting costs
+            // Handle updating or inserting costs
             if (isset($_POST['cost_name']) && isset($_POST['cost_amount'])) {
-                // Remove existing costs first
-                $wpdb->delete($cost_table, array('event_data_id' => $event_data_id));
-
-                // Loop through cost names and amounts and insert new ones
+                // Loop through cost names, amounts, and historic checkboxes
                 foreach ($_POST['cost_name'] as $key => $cost_name) {
                     $cost_name = sanitize_text_field($cost_name);
                     $cost_amount = floatval($_POST['cost_amount'][$key]);
-
+                    $cost_historic = isset($_POST['cost_historic'][$key]) ? 1 : 0;
+                    
                     // Format the cost amount to two decimal places
                     $cost_amount = number_format($cost_amount, 2, '.', '');
 
-                    // Insert the new costs
-                    $wpdb->insert(
-                        $cost_table,
-                        array(
-                            'event_data_id' => $event_data_id,
-                            'cost_name' => $cost_name,
-                            'cost_amount' => $cost_amount,
-                        )
-                    );
+                    // Check if a cost ID is provided for this entry (if updating existing cost)
+                    if (isset($_POST['cost_id'][$key]) && !empty($_POST['cost_id'][$key])) {
+                        $cost_id = intval($_POST['cost_id'][$key]);
+
+                        // Update the existing cost
+                        $wpdb->update(
+                            $cost_table,
+                            array(
+                                'cost_name' => $cost_name,
+                                'cost_amount' => $cost_amount,
+                                'historic' => $cost_historic,
+                            ),
+                            array('cost_id' => $cost_id)
+                        );
+                    } else {
+                        // Insert a new cost if no cost ID exists
+                        $wpdb->insert(
+                            $cost_table,
+                            array(
+                                'event_data_id' => $event_data_id,
+                                'cost_name' => $cost_name,
+                                'cost_amount' => $cost_amount,
+                                'historic' => $cost_historic,
+                            )
+                        );
+                    }
                 }
-            } else {
-                // If no costs were submitted, ensure the existing costs are deleted
-                $wpdb->delete($cost_table, array('event_data_id' => $event_data_id));
             }
 
             // Save disclaimers that are checked
@@ -943,13 +955,15 @@ function leanwi_edit_event_page() {
                             <?php foreach ($costs as $index => $cost): ?>
                                 <div id="cost-group-<?php echo $index; ?>" class="cost-group">
                                     <p><strong>Cost <?php echo $index + 1; ?></strong></p>
+                                    <input type="hidden" name="cost_id[]" value="<?php echo esc_attr($cost->cost_id); ?>" />
                                     <label for="cost_name_<?php echo $index; ?>">Cost Name</label>
                                     <input type="text" name="cost_name[]" id="cost_name_<?php echo $index; ?>" value="<?php echo esc_attr($cost->cost_name); ?>" required />
 
                                     <label for="cost_amount_<?php echo $index; ?>">Cost Amount</label>
                                     <input type="number" name="cost_amount[]" id="cost_amount_<?php echo $index; ?>" value="<?php echo esc_attr($cost->cost_amount); ?>" required step="0.01" min="0" />
 
-                                    <button type="button" onclick="removeCost(<?php echo $index; ?>)" class="button">Remove Cost</button>
+                                    <label for="cost_historic_<?php echo $index; ?>">Removed from Use</label>
+                                    <input type="checkbox" name="cost_historic[]" id="cost_historic_<?php echo $index; ?>" <?php echo $cost->historic ? 'checked' : ''; ?> />
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
@@ -1009,18 +1023,15 @@ function leanwi_edit_event_page() {
                 <label for="cost_amount_${costIndex}">Cost Amount</label>
                 <input type="number" name="cost_amount[]" id="cost_amount_${costIndex}" required step="0.01" min="0" />
 
-                <button type="button" onclick="removeCost(${costIndex})" class="button">Remove Cost</button>
+                <label for="cost_historic_${costIndex}">Removed from Use</label>
+                <input type="checkbox" name="cost_historic[]" id="cost_historic_${costIndex}" />
             `;
             costContainer.appendChild(costGroup);
             costIndex++;
         });
 
-        function removeCost(index) {
-            document.getElementById('cost-group-' + index).remove();
-        }
-
         // For dynamically adding disclaimers
-        let disclaimerCount = 0;
+        disclaimerCount = 0;
         document.getElementById('add-disclaimer-button').addEventListener('click', function() {
             disclaimerCount++;
             let disclaimerHtml = `
@@ -1043,6 +1054,29 @@ function leanwi_edit_event_page() {
 <?php
 }
 
+add_action('wp_ajax_check_cost_associations', 'check_cost_associations');
+function check_cost_associations() {
+    global $wpdb;
+    
+    // Verify the nonce for security
+    check_ajax_referer('event_nonce', 'security');
+
+    if (!isset($_POST['cost_id'])) {
+        wp_send_json_error('Cost ID missing.');
+    }
+    
+    $cost_id = intval($_POST['cost_id']);
+    $table_name = "{$wpdb->prefix}leanwi_event_booking_costs";
+
+    // Check for associated records in leanwi_event_booking_costs
+    $associated_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table_name WHERE cost_id = %d", $cost_id));
+    
+    if ($associated_count > 0) {
+        wp_send_json_success(['associated' => true]);
+    } else {
+        wp_send_json_success(['associated' => false]);
+    }
+}
 
 /**************************************************************************************************
  * Categories

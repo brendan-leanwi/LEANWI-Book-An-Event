@@ -45,6 +45,7 @@ function display_event_details() {
             <!-- Hidden field with the dynamic event slug -->
             <input type="hidden" id="event-slug" name="event_slug">
             <input type="hidden" id="capacity" name="capacity">
+            <input type="hidden" id="booking_reference" name="booking_reference">
 
             <label for="name">Name:</label>
             <input type="text" id="name" name="name" required><br />
