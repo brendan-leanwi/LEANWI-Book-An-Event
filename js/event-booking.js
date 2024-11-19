@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /**************************************************************************************************
- * SIGNUP FOR THIS EVENT
+ * NEW SIGNUP FOR THIS EVENT
  * *************************************************************************************************/
 document.getElementById('booking-choices').addEventListener('submit', function(event) {
     event.preventDefault();
@@ -320,8 +320,9 @@ function addListeners() {
 * FUNCTIONALITY FOR DISPLAYING AN EXISTING BOOKING
 *****************************************************************************************/
 let existingRecord = false;
-const retrieveBookingForm = document.querySelector('#existing-booking');
-const findButton = retrieveBookingForm.querySelector('.find-button[type="submit"]');
+const existingBookingForm = document.querySelector('#existing-booking');
+const findButton = existingBookingForm.querySelector('.find-button[type="submit"]');
+const deleteButton = existingBookingForm.querySelector('.find-button[type="button"]');
 
 // Setting up the page for showing an existing booking
 function showExistingBookingContainer() {
@@ -361,7 +362,7 @@ document.getElementById('retrieve-booking').addEventListener('click', function(e
 });
 
 // Retrieve Booking click to fetch the existing booking and display
-retrieveBookingForm.addEventListener('submit', function (event) {
+existingBookingForm.addEventListener('submit', function (event) {
     event.preventDefault();
     existingRecord = true;
     //contactFormContainer = document.getElementById('event-attendance');
@@ -414,6 +415,57 @@ retrieveBookingForm.addEventListener('submit', function (event) {
         document.body.style.cursor = 'default'; // Reset cursor after fetch completes
         findButton.disabled = false;
         findButton.style.cursor = 'default';
+    });
+});
+
+// Delete a booking functionality
+existingBookingForm.addEventListener('button', function (event) {
+    event.preventDefault();
+    existingRecord = true;
+    // Prepare form data
+    const formData = new FormData(this);
+    const eventDataId = document.querySelector('#hidden_event_data input[name="event_data_id"]');
+    if (eventDataId) {
+        formData.append('event_data_id', eventDataId.value);
+    }
+    
+    // Add the nonce
+    formData.append('delete_existing_event_nonce', document.querySelector('#delete_existing_event_nonce').value);
+
+    // Change cursor and disable submit button to prevent multiple clicks
+    document.body.style.cursor = 'wait';
+    deleteButton.disabled = true;
+    deleteButton.style.cursor = 'wait';
+    fetch('/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/delete-event-booking.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Display success message
+            alert('Booking deleted successfully!');
+            // Optionally hide the form or refresh the page
+            existingBookingForm.reset();
+            document.querySelector('#existing-booking-container').style.display = 'none';
+            
+        } else {
+            alert(data.error || 'Booking delete unsuccessful.');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting booking:', error);
+        alert('An error occurred while deleting the booking. Please try again.');
+    })
+    .finally(() => {
+        document.body.style.cursor = 'default'; // Reset cursor after delete completes
+        deleteButton.disabled = false;
+        deleteButton.style.cursor = 'default';
     });
 });
 

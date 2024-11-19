@@ -70,12 +70,12 @@ function handleExistingBooking($wpdb, $event_data_id, $existing_booking_referenc
 
     // Fetch existing booking ID
     $booking_id = $wpdb->get_var($wpdb->prepare(
-        "SELECT booking_id FROM {$wpdb->prefix}leanwi_event_booking WHERE booking_reference = %s",
-        $existing_booking_reference
+        "SELECT booking_id FROM {$wpdb->prefix}leanwi_event_booking WHERE booking_reference = %s and event_data_id = %d",
+        $existing_booking_reference, $event_data_id
     ));
 
     if (!$booking_id) {
-        sendResponse(false, 'No existing booking found for the provided reference.');
+        sendResponse(false, 'No existing booking found for the provided reference and Event.');
     }
 
     // Filter occurrences to exclude past ones i.e. include future only
@@ -86,7 +86,7 @@ function handleExistingBooking($wpdb, $event_data_id, $existing_booking_referenc
 
     try {
         if (count($future_occurrences) !== count($occurrences)) {
-            // Handle bookings with past occurrences
+            // Remove future occurrences so all occurences in this booking are past
             $wpdb->query($wpdb->prepare(
                 "DELETE bo 
                 FROM {$wpdb->prefix}leanwi_event_booking_occurrences bo
