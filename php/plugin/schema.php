@@ -98,6 +98,37 @@ function leanwi_event_create_tables() {
         disclaimer TEXT NOT NULL
     ) $engine $charset_collate;";
 
+    // SQL for creating leanwi_event_waitlist_booking table
+    $sql10 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_waitlist_booking (
+        booking_id INT AUTO_INCREMENT PRIMARY KEY,
+        booking_reference CHAR(10) NOT NULL UNIQUE,
+        event_data_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20),
+        total_participants INT NOT NULL,
+        FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
+    ) $engine $charset_collate;";
+
+    // SQL for creating leanwi_event_waitlist_costs table
+    $sql11 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_waitlist_costs (
+        booking_id INT NOT NULL,
+        cost_id INT NOT NULL,
+        number_of_participants INT NOT NULL,
+        payment_received TINYINT(1) DEFAULT 0,
+        FOREIGN KEY (booking_id) REFERENCES {$wpdb->prefix}leanwi_event_waitlist_booking(booking_id) ON DELETE CASCADE,
+        FOREIGN KEY (cost_id) REFERENCES {$wpdb->prefix}leanwi_event_cost(cost_id) ON DELETE CASCADE
+    ) $engine $charset_collate;";
+
+    // SQL for creating leanwi_event_waitlist_occurrences table
+    $sql12 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_waitlist_occurrences (
+        booking_id INT NOT NULL,
+        occurrence_id bigint(20) unsigned,
+        number_of_participants INT NOT NULL,
+        FOREIGN KEY (booking_id) REFERENCES {$wpdb->prefix}leanwi_event_waitlist_booking(booking_id) ON DELETE CASCADE,
+        FOREIGN KEY (occurrence_id) REFERENCES {$wpdb->prefix}tec_occurrences(occurrence_id) ON DELETE CASCADE
+    ) $engine $charset_collate;";
+
     // Execute the SQL queries
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
@@ -151,28 +182,66 @@ function leanwi_event_create_tables() {
     if ($wpdb->last_error) {
         error_log('DB Error9: ' . $wpdb->last_error); // Logs the error to wp-content/debug.log
     }
+    dbDelta($sql10);
+    // Debug logging to track SQL execution
+    if ($wpdb->last_error) {
+        error_log('DB Error10: ' . $wpdb->last_error); // Logs the error to wp-content/debug.log
+    }
+    dbDelta($sql11);
+    // Debug logging to track SQL execution
+    if ($wpdb->last_error) {
+        error_log('DB Error11: ' . $wpdb->last_error); // Logs the error to wp-content/debug.log
+    }
+    dbDelta($sql12);
+    // Debug logging to track SQL execution
+    if ($wpdb->last_error) {
+        error_log('DB Error12: ' . $wpdb->last_error); // Logs the error to wp-content/debug.log
+    }
 
-    // Insert default category
-    $wpdb->insert(
-        "{$wpdb->prefix}leanwi_event_category",
-        array(
-            'category_id' => 1,
-            'category_name' => 'Uncategorized',
-            'historic' => 0
-        ),
-        array('%d', '%s', '%d') // Data types
+
+    // Check if the category_id = 1 already exists
+    $category_exists = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}leanwi_event_category WHERE category_id = %d",
+            1
+        )
     );
 
-    // Insert default audience
-    $wpdb->insert(
-        "{$wpdb->prefix}leanwi_event_audience",
-        array(
-            'audience_id' => 1,
-            'audience_name' => 'Uncategorized',
-            'historic' => 0
-        ),
-        array('%d', '%s', '%d') // Data types
+    if (!$category_exists) {
+        error_log("category_id does not exist");
+        // Insert default category
+        $wpdb->insert(
+            "{$wpdb->prefix}leanwi_event_category",
+            array(
+                'category_id' => 1,
+                'category_name' => 'Uncategorized',
+                'historic' => 0
+            ),
+            array('%d', '%s', '%d') // Data types
+        );
+    }
+
+    // Check if the audience_id = 1 already exists
+    $audience_exists = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}leanwi_event_audience WHERE audience_id = %d",
+            1
+        )
     );
+
+    if (!$audience_exists) {
+        error_log("audience_id does not exist");
+        // Insert default audience
+        $wpdb->insert(
+            "{$wpdb->prefix}leanwi_event_audience",
+            array(
+                'audience_id' => 1,
+                'audience_name' => 'Uncategorized',
+                'historic' => 0
+            ),
+            array('%d', '%s', '%d') // Data types
+        );
+    }
 }
 
 
@@ -190,5 +259,8 @@ function leanwi_event_drop_tables() {
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_audience");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_user");
     $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_saved_disclaimer");
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_waitlist_occurrences");
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_waitlist_costs");
+    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}leanwi_event_waitlist_booking");
 }
 

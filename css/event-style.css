@@ -1,4 +1,5 @@
 /* Container styling */
+.admin-occurrences-container,
 .booking-choices-container,
 .existing-booking-container,
 #event-attendance {
@@ -65,6 +66,32 @@
     color: #d9534f; /* Default color, can change based on response */
 }
 
+.staff-button-container-1 .find-button{
+    background-color: #a82d24 !important;
+    color: white !important;
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: background-color 0.3s ease !important;
+}
+
+.staff-button-container-2 .find-button{
+    background-color: #2462a8 !important;
+    color: white !important;
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: background-color 0.3s ease !important;
+}
+
 /* Default submit button color */
 .existing-booking-container .find-button,
 #attendance-form button[type="submit"] {
@@ -85,21 +112,26 @@
 }
 
 /* Specific styling for the delete button */
+.event-attendance #waitlist-booking,
 .booking-choices-container #retrieve-booking {
     background-color: blue !important;
+    border-radius: 4px !important;
 }
 
 /* Button container alignment */
-.existing-booking-container .button-container {
-    display: flex;
-    gap: 10px;
-}
-
-/* Button container alignment */
+.booking-choices-container .buton-container,
 .existing-booking-container .button-container {
     display: flex;
     justify-content: space-between;
     gap: 10px;
+}
+.event-attendance .find-button {
+    width: 100% !important;
+    padding: 10px !important;
+    font-size: 16px !important;
+    font-weight: bold !important; 
+    border: none !important;
+    color: white !important;
 }
 
 /* Adjust button width */
@@ -159,6 +191,12 @@ p {
     text-align: left;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.occurrence-button.no-spots {
+    /*background-color: #ffcccc; /* Light red */
+    border: 1px solid #ff0000; /* Red border */
+    opacity: 0.7;
 }
 
 .occurrence-button:hover {
@@ -228,3 +266,30 @@ label {
     margin-right: 5px;  /* Space between label and input */
 }
 
+.participant-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px; 
+}
+
+.participant-table th, .participant-table td {
+    border: 1px solid #ddd;
+    padding: 6px; 
+    text-align: left;
+}
+
+.participant-table th {
+    background-color: #f4f4f4;
+    font-size: 13px; 
+}
+
+.participant-table a {
+    font-size: 13px; 
+    color: #0073aa; 
+    text-decoration: none;
+}
+
+.participant-table a:hover {
+    text-decoration: underline;
+}

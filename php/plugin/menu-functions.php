@@ -186,6 +186,16 @@ function leanwi_event_add_admin_menu() {
         'leanwi-book-an-event-settings',// Menu slug
         __NAMESPACE__ . '\\leanwi_event_settings_page'        // Callback function to display settings
     );
+
+    // Sub-menu: "Staff"
+    add_submenu_page(
+        'leanwi-book-an-event-main',    // Parent slug
+        'Event Staff',                   // Page title
+        'Staff',                   // Menu title
+        'manage_options',             // Capability
+        'leanwi-book-an-event-staff',// Menu slug
+        __NAMESPACE__ . '\\leanwi_event_staff_page'        // Callback function to display settings
+    );
 }
 
 // Hook to create the admin menu
@@ -2113,3 +2123,97 @@ function leanwi_recaptcha_secret_key_field() {
     echo '<hr style="margin-top: 40px; margin-bottom: 20px; border: 1px solid #ccc;">'; // Adds a horizontal line before the reCAPTCHA fields
 }
 
+
+/**************************************************************************************************
+ * Event Staff Management Page
+ **************************************************************************************************/
+
+ function leanwi_event_staff_page() {
+    // Ensure only administrators can access this page.
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.'));
+    }
+
+    // Handle role assignment form submission.
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['leanwi_assign_event_staff'])) {
+        $user_id = intval($_POST['user_id']);
+        $user = get_user_by('ID', $user_id);
+        if ($user) {
+            $user->add_role('event_staff');
+            echo '<div class="updated"><p>User assigned the "Event Staff" role successfully.</p></div>';
+        } else {
+            echo '<div class="error"><p>Invalid user selected.</p></div>';
+        }
+    }
+
+    // Handle role unassignment form submission.
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['leanwi_unassign_event_staff'])) {
+        $user_id = intval($_POST['leanwi_unassign_event_staff']);
+        $user = get_user_by('ID', $user_id);
+        if ($user) {
+            $user->remove_role('event_staff');
+            echo '<div class="updated"><p>User unassigned the "Event Staff" role successfully.</p></div>';
+        } else {
+            echo '<div class="error"><p>Invalid user selected for unassignment.</p></div>';
+        }
+    }
+
+    // Display the user assignment form.
+    echo '<div class="wrap">';
+    echo '<h1>Manage Event Staff</h1>';
+    echo '<form method="post">';
+    echo '<label for="user_id">Select User:</label>';
+    echo '<select name="user_id" id="user_id">';
+    $users = get_users();
+    foreach ($users as $user) {
+        echo '<option value="' . esc_attr($user->ID) . '">' . esc_html($user->display_name) . '</option>';
+    }
+    echo '</select>';
+    echo '<button type="submit" name="leanwi_assign_event_staff" class="button-primary">Assign Event Staff Role</button>';
+    echo '</form>';
+
+    // List users with the "event_staff" role and provide unassignment option.
+    $staff_users = get_users(['role' => 'event_staff']);
+    if (!empty($staff_users)) {
+        echo '<h2>Current Event Staff</h2>';
+        echo '<ul>';
+        foreach ($staff_users as $staff_user) {
+            echo '<li>';
+            echo esc_html($staff_user->display_name) . ' (' . esc_html($staff_user->user_email) . ')';
+            echo ' <form method="post" style="display:inline;">';
+            echo '<input type="hidden" name="leanwi_unassign_event_staff" value="' . esc_attr($staff_user->ID) . '">';
+            echo '<button type="submit" class="button-secondary">Remove</button>';
+            echo '</form>';
+            echo '</li>';
+        }
+        echo '</ul>';
+    } else {
+        echo '<p>No users have been assigned the "Event Staff" role yet.</p>';
+    }
+
+    echo '</div>';
+}
+
+
+/**************************************************************************************************
+ * Role Registration on Plugin Activation
+ **************************************************************************************************/
+
+ function leanwi_register_event_staff_role() {
+    add_role(
+        'event_staff',
+        __('Event Staff', 'leanwi-book-an-event'), // Added text domain for translation.
+        [
+            'read' => true, // Allow basic dashboard access.
+            'manage_staff_event_pages' => true, // Allow management of staff pages and use of staff functionality on booking event pages
+        ]
+    );
+}
+register_activation_hook(__FILE__, __NAMESPACE__ . '\\leanwi_register_event_staff_role');
+
+// Ensure the "event_staff" role exists for backward compatibility on plugin load.
+add_action('init', function() {
+    if (!get_role('event_staff')) {
+        leanwi_register_event_staff_role();
+    }
+});

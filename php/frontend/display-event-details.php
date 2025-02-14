@@ -1,12 +1,52 @@
 <?php
 
+// Hook into WordPress to ensure functions like wp_get_current_user are available.
+add_action('wp_enqueue_scripts', function () {
+    // Check if the current user has the "event_staff" role.
+    $current_user = wp_get_current_user();
+    $is_event_staff = in_array('event_staff', (array) $current_user->roles);
+
+    // Pass the result to JavaScript.
+    echo '<script>';
+    echo 'const isEventStaff = ' . json_encode($is_event_staff) . ';';
+    echo '</script>';
+});
+
 // Register the shortcode for the event details
 function display_event_details() {
     // Output the HTML and add the venue ID as a hidden field
     ob_start();
+    $current_user = wp_get_current_user();
+    $is_booking_staff = in_array('booking_staff', (array) $current_user->roles);
     ?>
     <div id="hidden_event_data">
         <!-- Data from leanwi_event_data will be placed in here as hidden input fields via JavaScript (event-booking.js) on page load -->
+    </div>
+
+    <div class="staff-button-container-1" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
+        <button type="button" id="show-occurrences" class="find-button">Click Here to Show All Confirmed Bookings</button>
+        <p>&nbsp;</p>
+    </div>
+
+    <div class="admin-occurrences-heading" id="admin-occurrences-heading" style="display: none">
+    <p><h2 style="text-align: center;">Occurrences for this event</h2></p>
+    </div>
+
+    <div class="admin-occurrences-container" id="admin-occurrences-container" style="display: none">
+    
+    </div>
+
+    <div class="staff-button-container-2" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
+        <button type="button" id="show-waitlist" class="find-button">Click Here to Show All Wait List Bookings</button>
+        <p>&nbsp;</p>
+    </div>
+
+    <div class="admin-waitlist-heading" id="admin-waitlist-heading" style="display: none">
+    <p><h2 style="text-align: center;">Wait Lists for this event</h2></p>
+    </div>
+
+    <div class="admin-waitlist-container" id="admin-waitlist-container" style="display: none">
+    
     </div>
 
     <div class="booking-choices-container" id="booking-choices-container" style="display: block">
@@ -19,6 +59,7 @@ function display_event_details() {
             </div>
         </form>
     </div>
+
 
     <div class="existing-booking-container" id="existing-booking-container" style="display: none">
         <p><h2 id="existing_booking_heading">Please enter your booking reference?</h2></p>
@@ -73,8 +114,16 @@ function display_event_details() {
             <div id="event-disclaimers">
             </div>
 
-            <!-- Submit button -->
-            <button type="submit">Book Event</button>
+            <div class="staff-capacity-override-container" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
+                <input type="checkbox" name="capacity_override" id="capacity_override" class="capacity_override">
+                <label for="capacity_override">Override capacity restrictions</label>
+            </div>
+
+            <!-- Submit and Wait List buttons -->
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" name="action" value="book">Book Event</button>         
+                <button type="submit" name="action" value="waitlist" id="waitlist-booking" class="find-button">Add to Wait List</button>
+            </div>
         </form>
         <p id="response-message"></p>
     </div>
