@@ -23,8 +23,18 @@ function display_event_details() {
         <!-- Data from leanwi_event_data will be placed in here as hidden input fields via JavaScript (event-booking.js) on page load -->
     </div>
 
+    <div class="staff-search-container" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
+        <h2 style="text-align: center;">Search by Name</h2> 
+        <form id="staffSearchForm" method="get" style="margin-bottom: 20px;">
+            <input type="text" id="nameSearchInput" name="name_search" value="" placeholder="Search by name" style="padding: 8px; width: 70%;">
+            <button type="submit" style="padding: 8px;">Search</button>
+        </form>
+        <div id="searchResults"></div> <!-- Results will be injected here -->
+    </div>
+
+
     <div class="staff-button-container-1" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
-        <button type="button" id="show-occurrences" class="find-button">Click Here to Show All Confirmed Bookings</button>
+        <button type="button" id="show-occurrences" class="find-button">Show All Confirmed Bookings by Occurrence</button>
         <p>&nbsp;</p>
     </div>
 
@@ -37,7 +47,7 @@ function display_event_details() {
     </div>
 
     <div class="staff-button-container-2" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
-        <button type="button" id="show-waitlist" class="find-button">Click Here to Show All Wait List Bookings</button>
+        <button type="button" id="show-waitlist" class="find-button">Show All Wait List Bookings by Occurrence</button>
         <p>&nbsp;</p>
     </div>
 

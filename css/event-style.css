@@ -293,3 +293,67 @@ label {
 .participant-table a:hover {
     text-decoration: underline;
 }
+
+/* Name Search */
+.staff-search-container {
+    max-width: 100%;
+    margin: 15px auto;
+    padding: 10px;
+    background: #f8f9fa; /* Light background */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.staff-search-container h2 {
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+#staffSearchForm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+#nameSearchInput {
+    width: 80%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    transition: border 0.3s ease-in-out;
+}
+
+#nameSearchInput:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+#staffSearchForm button {
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out;
+}
+
+#staffSearchForm button:hover {
+    background-color: #0056b3;
+}
+
+/* Search results container */
+#searchResults {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 5px;
+    font-size: .8rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

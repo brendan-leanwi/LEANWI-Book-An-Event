@@ -25,6 +25,32 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error('Error getting event slug:', error);
     }
 
+    const searchResults = document.getElementById("searchResults");
+    document.body.style.cursor = 'wait'; // Set cursor before fetch starts
+    // Fetch event data
+    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                globalEventData = data.data[0];
+
+            } else {
+                throw new Error("Event data not found or invalid.");
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching data:", error);
+            searchResults.innerHTML = "<p style='color: red;'>Error retrieving Event data.</p>";
+        })
+        .finally(() => {
+            document.body.style.cursor = 'default'; // Reset cursor after fetch completes
+        });
+
     // Function to extract query parameters from the URL
     function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -34,6 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Get booking_id from the URL and set it in the unique_id input field if it exists
     const bookingRef = getQueryParam('booking_ref');
     if (bookingRef) {
+        waitListBooking = bookingRef.startsWith("WL#");
         document.getElementById('booking_ref').value = bookingRef;
         document.getElementById('existing_booking_heading').textContent = "Your Booking Reference has been Entered:";
         document.getElementById('event_attendance_heading').textContent = "Your details for attending this event";
@@ -52,13 +79,13 @@ document.getElementById('show-occurrences').addEventListener('click', function(e
     if(occurrencesAdminPage){
         document.getElementById('admin-occurrences-heading').style.display = 'block';
         document.getElementById('admin-occurrences-container').style.display = 'block';
-        document.getElementById('show-occurrences').textContent = 'Click Here to Not Show Confirmed Bookings'
+        document.getElementById('show-occurrences').textContent = 'Do Not Show Confirmed Bookings'
         getAdminOccurrences();
     }
     else {
         document.getElementById('admin-occurrences-heading').style.display = 'none';
         document.getElementById('admin-occurrences-container').style.display = 'none';
-        document.getElementById('show-occurrences').textContent = 'Click Here to Show All Confirmed Bookings'
+        document.getElementById('show-occurrences').textContent = 'Show All Confirmed Bookings by Occurrence'
     }
 
 });
@@ -70,190 +97,245 @@ document.getElementById('show-waitlist').addEventListener('click', function(even
     if(waitListAdminPage){
         document.getElementById('admin-waitlist-heading').style.display = 'block';
         document.getElementById('admin-waitlist-container').style.display = 'block';
-        document.getElementById('show-waitlist').textContent = 'Click Here to Not Show Wait List Bookings'
+        document.getElementById('show-waitlist').textContent = 'Do Not Show Wait List Bookings'
         getWaitLists();
     }
     else {
         document.getElementById('admin-waitlist-heading').style.display = 'none';
         document.getElementById('admin-waitlist-container').style.display = 'none';
-        document.getElementById('show-waitlist').textContent = 'Click Here to Show All Wait List Bookings'
+        document.getElementById('show-waitlist').textContent = 'Show All Wait List Bookings by Occurrence'
     }
 
 });
+/***************************************************************************************** */
+//Name search click functionality to display event bookings and waitlists based on an entered name
+/***************************************************************************************** */
+document.getElementById("staffSearchForm").addEventListener("submit", function (event) {
+    event.preventDefault(); // Prevent page reload
 
-/***************************************************************************************** */
-//Display the occurrences so that the admin is able to use them
-/***************************************************************************************** */
-function getAdminOccurrences(){
+    const searchResults = document.getElementById("searchResults");
+    const searchInput = document.getElementById("nameSearchInput").value.trim();
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
-    // Fetch event data
-    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success && data.data.length > 0) {
-                const event = data.data[0];
-                return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${event.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        let occurrencesContainer = document.querySelector('#admin-occurrences-container');
-                        occurrencesContainer.innerHTML = ''; // Clear any previous content
+    // Construct URLs for both API requests using globalEventData
+    const participantsUrl = `/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-participants-by-name.php?post_id=${globalEventData.post_id}&search_term=${encodeURIComponent(searchInput)}&_wpnonce=${leanwiVars.ajax_nonce}`;
+    const waitlistUrl = `/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-waitlist-participants-by-name.php?post_id=${globalEventData.post_id}&search_term=${encodeURIComponent(searchInput)}&_wpnonce=${leanwiVars.ajax_nonce}`;
 
-                        data.event_occurrences.forEach(occurrence => {
-                            let startDate = new Date(occurrence.start_date);
-                            let endDate = new Date(occurrence.end_date);
+    // Fetch both participant lists in parallel
+    Promise.all([
+        fetch(participantsUrl).then(res => res.json()),
+        fetch(waitlistUrl).then(res => res.json())
+    ])
+    .then(([participantsData, waitlistData]) => {
+        let outputHtml = "";
 
-                            // Format the date and time
-                            let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                            let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        // Display event participants if available
+        if (participantsData.bookings.length > 0) {
+            outputHtml += `<h3>Confirmed Participants</h3>`;
+            outputHtml += generateResultsTable(participantsData.bookings);
+        } else {
+            outputHtml += `<h3>Confirmed Participants</h3><p>No results found.</p>`;
+        }
 
-                            // Calculate spots available
-                            let spotsAvailable = event.capacity - occurrence.total_participants;
+        // Display waitlist participants if available
+        if (waitlistData.bookings.length > 0) {
+            outputHtml += `<h3>Waitlist Participants</h3>`;
+            outputHtml += generateResultsTable(waitlistData.bookings);
+        } else {
+            outputHtml += `<h3>Waitlist Participants</h3><p>No results found.</p>`;
+        }
 
-                            // Create a display element for each occurrence
-                            let occurrenceElement = document.createElement('div');
-                            occurrenceElement.classList.add('occurrence-button');
-                            occurrenceElement.dataset.occurrenceId = occurrence.occurrence_id;
+        searchResults.innerHTML = outputHtml;
+    })
+    .catch(error => {
+        console.error("Error fetching data:", error);
+        searchResults.innerHTML = "<p style='color: red;'>Error retrieving data.</p>";
+    })
+    .finally(() => {
+        document.body.style.cursor = 'default'; // Reset cursor after fetch completes
+    });
+});
 
-                            occurrenceElement.innerHTML = `
-                                <div class="occurrence-info">
-                                    ${formattedStartDate} to ${formattedEndDate}
-                                </div>
-                                <div class="participants">
-                                    (${event.capacity > 0 ? `${spotsAvailable} Spots Available of ${event.capacity}` : 'Unlimited Spots Available'})
-                                </div>
-                            `;
+// Function to generate HTML table from data
+function generateResultsTable(bookings) {
+    let tableHtml = `
+        <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Name</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Email</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Phone</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;"># Participants</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;"># Occurrences</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>`;
 
-                            // Create a container for the participant list (hidden initially)
-                            let participantListContainer = document.createElement('div');
-                            participantListContainer.classList.add('participant-list');
-                            participantListContainer.style.display = 'none'; // Hide by default
+    bookings.forEach(booking => {
+        const bookingUrl = `${baseUrl}?booking_ref=${encodeURIComponent(booking.booking_reference)}`;
 
-                            // Add click event to toggle participant list
-                            occurrenceElement.addEventListener('click', function () {
-                                let occurrenceId = this.dataset.occurrenceId;
+        tableHtml += `
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">${booking.name}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${booking.email}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">${booking.phone}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${booking.total_participants}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${booking.occurrence_count}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                    <a href="${bookingUrl}" style="color: blue; text-decoration: underline;" target="_blank">View</a>
+                </td>
+            </tr>`;
+    });
 
-                                // Hide all other participant list containers
-                                document.querySelectorAll('.participant-list').forEach(container => {
-                                    container.style.display = 'none';
-                                });
-
-                                // Show only the clicked occurrence's participant list
-                                if (participantListContainer.style.display === 'none') {
-                                    fetchParticipants(occurrenceId, participantListContainer);
-                                    participantListContainer.style.display = 'block';
-                                } else {
-                                    participantListContainer.style.display = 'none';
-                                }
-                            });
-
-                            // Append the button to the container
-                            occurrencesContainer.appendChild(occurrenceElement);
-                            // Append the participant list separately below the button
-                            occurrencesContainer.appendChild(participantListContainer);
-                        });
-
-                    })
-                    .catch(error => {
-                        console.error('Error fetching occurrences:', error);
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching event details:', error))
-            .finally(() => {
-                document.body.style.cursor = 'default'; // Reset cursor after fetch completes
-            });
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
 }
 
 /***************************************************************************************** */
-//Display the Wait Lists so that the admin is able to use them
+//Display the occurrences so that the admin is able to view them
+/***************************************************************************************** */
+function getAdminOccurrences() {
+    document.body.style.cursor = 'wait'; // Set cursor before fetch starts
+
+    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+        .then(response => response.json())
+        .then(data => {
+            let occurrencesContainer = document.querySelector('#admin-occurrences-container');
+            occurrencesContainer.innerHTML = ''; // Clear any previous content
+
+            data.event_occurrences.forEach(occurrence => {
+                let startDate = new Date(occurrence.start_date);
+                let endDate = new Date(occurrence.end_date);
+
+                // Format the date and time
+                let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                // Calculate spots available
+                let spotsAvailable = globalEventData.capacity - occurrence.total_participants;
+
+                // Create a display element for each occurrence
+                let occurrenceElement = document.createElement('div');
+                occurrenceElement.classList.add('occurrence-button');
+                occurrenceElement.dataset.occurrenceId = occurrence.occurrence_id;
+
+                occurrenceElement.innerHTML = `
+                    <div class="occurrence-info">
+                        ${formattedStartDate} to ${formattedEndDate}
+                    </div>
+                    <div class="participants">
+                        (${globalEventData.capacity > 0 ? `${spotsAvailable} Spots Available of ${globalEventData.capacity}` : 'Unlimited Spots Available'})
+                    </div>
+                `;
+
+                // Create a container for the participant list (hidden initially)
+                let participantListContainer = document.createElement('div');
+                participantListContainer.classList.add('participant-list');
+                participantListContainer.style.display = 'none'; // Hide by default
+
+                // Add click event to toggle participant list
+                occurrenceElement.addEventListener('click', function () {
+                    let occurrenceId = this.dataset.occurrenceId;
+
+                    // Hide all other participant list containers
+                    document.querySelectorAll('.participant-list').forEach(container => {
+                        container.style.display = 'none';
+                    });
+
+                    // Show only the clicked occurrence's participant list
+                    if (participantListContainer.style.display === 'none') {
+                        fetchParticipants(occurrenceId, participantListContainer);
+                        participantListContainer.style.display = 'block';
+                    } else {
+                        participantListContainer.style.display = 'none';
+                    }
+                });
+
+                // Append the button to the container
+                occurrencesContainer.appendChild(occurrenceElement);
+                // Append the participant list separately below the button
+                occurrencesContainer.appendChild(participantListContainer);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching occurrences:', error);
+        })
+        .finally(() => {
+            document.body.style.cursor = 'default'; // Reset cursor after fetch completes
+        });
+}
+
+/***************************************************************************************** */
+//Display the Wait Lists so that the admin is able to view them
 /***************************************************************************************** */
 function getWaitLists(){
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
     // Fetch event data
-    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
+    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-waitlists.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+        .then(response => response.json())
         .then(data => {
-            if (data.success && data.data.length > 0) {
-                const event = data.data[0];
-                return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-waitlists.php?post_id=${event.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        let occurrencesContainer = document.querySelector('#admin-waitlist-container');
-                        occurrencesContainer.innerHTML = ''; // Clear any previous content
+            let occurrencesContainer = document.querySelector('#admin-waitlist-container');
+            occurrencesContainer.innerHTML = ''; // Clear any previous content
 
-                        data.event_occurrences.forEach(occurrence => {
-                            let startDate = new Date(occurrence.start_date);
-                            let endDate = new Date(occurrence.end_date);
+            data.event_occurrences.forEach(occurrence => {
+                let startDate = new Date(occurrence.start_date);
+                let endDate = new Date(occurrence.end_date);
 
-                            // Format the date and time
-                            let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                            let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                // Format the date and time
+                let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-                            // Create a display element for each occurrence
-                            let occurrenceElement = document.createElement('div');
-                            occurrenceElement.classList.add('occurrence-button');
-                            occurrenceElement.dataset.occurrenceId = occurrence.occurrence_id;
+                // Create a display element for each occurrence
+                let occurrenceElement = document.createElement('div');
+                occurrenceElement.classList.add('occurrence-button');
+                occurrenceElement.dataset.occurrenceId = occurrence.occurrence_id;
 
-                            occurrenceElement.innerHTML = `
-                                <div class="occurrence-info">
-                                    ${formattedStartDate} to ${formattedEndDate}
-                                </div>
-                                <div class="participants">
-                                    ${occurrence.total_participants} are waiting
-                                </div>
-                            `;
+                occurrenceElement.innerHTML = `
+                    <div class="occurrence-info">
+                        ${formattedStartDate} to ${formattedEndDate}
+                    </div>
+                    <div class="participants">
+                        ${occurrence.total_participants} are waiting
+                    </div>
+                `;
 
-                            // Create a container for the participant list (hidden initially)
-                            let participantListContainer = document.createElement('div');
-                            participantListContainer.classList.add('participant-list');
-                            participantListContainer.style.display = 'none'; // Hide by default
+                // Create a container for the participant list (hidden initially)
+                let participantListContainer = document.createElement('div');
+                participantListContainer.classList.add('participant-list');
+                participantListContainer.style.display = 'none'; // Hide by default
 
-                            // Add click event to toggle participant list
-                            occurrenceElement.addEventListener('click', function () {
-                                let occurrenceId = this.dataset.occurrenceId;
+                // Add click event to toggle participant list
+                occurrenceElement.addEventListener('click', function () {
+                    let occurrenceId = this.dataset.occurrenceId;
 
-                                // Hide all other participant list containers
-                                document.querySelectorAll('.participant-list').forEach(container => {
-                                    container.style.display = 'none';
-                                });
-
-                                // Show only the clicked occurrence's participant list
-                                if (participantListContainer.style.display === 'none') {
-                                    fetchWaitListParticipants(occurrenceId, participantListContainer);
-                                    participantListContainer.style.display = 'block';
-                                } else {
-                                    participantListContainer.style.display = 'none';
-                                }
-                            });
-
-                            // Append the button to the container
-                            occurrencesContainer.appendChild(occurrenceElement);
-                            // Append the participant list separately below the button
-                            occurrencesContainer.appendChild(participantListContainer);
-                        });
-
-                    })
-                    .catch(error => {
-                        console.error('Error fetching occurrences:', error);
+                    // Hide all other participant list containers
+                    document.querySelectorAll('.participant-list').forEach(container => {
+                        container.style.display = 'none';
                     });
-                }
-            })
-            .catch(error => console.error('Error fetching event details:', error))
-            .finally(() => {
-                document.body.style.cursor = 'default'; // Reset cursor after fetch completes
+
+                    // Show only the clicked occurrence's participant list
+                    if (participantListContainer.style.display === 'none') {
+                        fetchWaitListParticipants(occurrenceId, participantListContainer);
+                        participantListContainer.style.display = 'block';
+                    } else {
+                        participantListContainer.style.display = 'none';
+                    }
+                });
+
+                // Append the button to the container
+                occurrencesContainer.appendChild(occurrenceElement);
+                // Append the participant list separately below the button
+                occurrencesContainer.appendChild(participantListContainer);
             });
+        })
+        .catch(error => {
+            console.error('Error fetching occurrences:', error);
+        })
+        .finally(() => {
+            document.body.style.cursor = 'default'; // Reset cursor after fetch completes
+        });
 }
 
 // Function to fetch and display participants for a specific occurrence
@@ -386,136 +468,119 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
     existingRecord = false;
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
-    // Fetch event data
-    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+    // First, check if the event is sold out
+    checkEventAvailability(globalEventData.post_id, globalEventData.capacity)
+        .then(isSoldOut => {
+            if (isSoldOut) {
+                // If sold out, show the sold-out message and stop further processing
+                document.getElementById('sold-out').style.display = 'block';
+                document.getElementById('event-attendance').style.display = 'none';
+            } else {
+                createFormFields(globalEventData);
+                document.getElementById('event-attendance').style.display = 'block';
             }
-            return response.json();
         })
-        .then(data => {
-            if (data.success && data.data.length > 0) {
-                const event = data.data[0];
-        
-                // First, check if the event is sold out
-                return checkEventAvailability(event.post_id, event.capacity)
-                    .then(isSoldOut => {
-                        if (isSoldOut) {
-                            // If sold out, show the sold-out message and stop further processing
-                            document.getElementById('sold-out').style.display = 'block';
-                            document.getElementById('event-attendance').style.display = 'none';
-                        } else {
-                            createFormFields(event);
-                            document.getElementById('event-attendance').style.display = 'block';
+        .then(() => {
+            // Fetch event occurrences
+            return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`) 
+                .then(response => response.json())
+                .then(data => {
+                    let occurrencesContainer = document.querySelector('#occurrences-container');
+                    occurrencesContainer.innerHTML = ''; // Clear any previous content
+
+                    data.event_occurrences.forEach(occurrence => {
+                        let startDate = new Date(occurrence.start_date);
+                        let endDate = new Date(occurrence.end_date);
+
+                        // Format the date and time
+                        let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                        let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                        // Calculate spots available. If it's overbooked (negative), show 0 spots available to general users
+                        let spotsAvailable = globalEventData.capacity - occurrence.total_participants;
+                        if (!isEventStaff && spotsAvailable < 0) {
+                            spotsAvailable = 0;
                         }
-                    })
-                    .then(() => {
-                        // Fetch event occurrences
-                        return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${event.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                let occurrencesContainer = document.querySelector('#occurrences-container');
-                                occurrencesContainer.innerHTML = ''; // Clear any previous content
-        
-                                data.event_occurrences.forEach(occurrence => {
-                                    let startDate = new Date(occurrence.start_date);
-                                    let endDate = new Date(occurrence.end_date);
-        
-                                    // Format the date and time
-                                    let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                                    let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-        
-                                    // Calculate spots available. If it's overbooked (negative) only show that there are 0 spots available to the general user
-                                    let spotsAvailable = event.capacity - occurrence.total_participants;
-                                    if (!isEventStaff && spotsAvailable < 0) {
-                                        spotsAvailable = 0;
-                                    }
-        
-                                    // Create a display element for each occurrence
-                                    let occurrenceElement = document.createElement('div');
-                                    occurrenceElement.classList.add('occurrence-button');
-        
-                                    // Add a class if no spots are available
-                                    if (event.capacity > 0 && spotsAvailable < 1) {
-                                        occurrenceElement.classList.add('no-spots');
-                                    }
-        
-                                    occurrenceElement.innerHTML = `
-                                        <input type="checkbox" class="occurrence-checkbox" value="${occurrence.occurrence_id}">
-                                        <div class="occurrence-info">
-                                            ${formattedStartDate} to ${formattedEndDate}
-                                        </div> 
-                                        <div class="participants">
-                                            (${event.capacity > 0 ? spotsAvailable + ' Spots Available' : 'Unlimited Spots Available'})
-                                        </div>
-                                    `;
-        
-                                    occurrencesContainer.appendChild(occurrenceElement);
-                                });
-        
-                                // Apply participation rule logic
-                                applyParticipationRule(event.participation_rule);
-                            })
-                            .catch(error => {
-                                console.error('Error fetching occurrences:', error);
-                            });
-                    })
-                    .then(() => {
-                        // Fetch event costs
-                        return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-costs.php?event_data_id=${event.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                let costsContainer = document.querySelector('#costs-container');
-                                costsContainer.innerHTML = ''; // Clear any previous content
-        
-                                // Loop through each cost and create the display elements
-                                data.event_costs.forEach(cost => {
-                                    
-                                    if(cost.historic == 0){ //For new bookings only show costs that are not historic
-                                        
-                                        // Create a container for each cost item
-                                        let costElement = document.createElement('div');
-                                        costElement.classList.add('cost-item'); // Add a class for styling
-            
-                                        // Create the content of each cost item
-                                        costElement.innerHTML = `
-                                            <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
-                                            <div class="cost-amount">$${cost.cost_amount}</div>
-                                            <label for="attending-${cost.cost_id}">Number Attending:</label>
-                                            <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="0" class="attending-input">
-                                        `;
-            
-                                        // Append the cost element to the container
-                                        costsContainer.appendChild(costElement);
-                                    }
-                                });
-        
-                                // Create a div to display the total cost
-                                totalCostDisplay = document.createElement('div');
-                                totalCostDisplay.id = 'total-cost-display';
-                                totalCostDisplay.textContent = 'Your total cost is $0.00 for 0 Events';  // Initial message
-                                costsContainer.appendChild(totalCostDisplay);
-                            })
-                            .catch(error => {
-                                console.error('Error fetching costs:', error);
-                            });
-                    })
-                    .then(() => {
-                        displayDisclaimers(event, globalEventData);
+
+                        // Create a display element for each occurrence
+                        let occurrenceElement = document.createElement('div');
+                        occurrenceElement.classList.add('occurrence-button');
+
+                        // Add a class if no spots are available
+                        if (globalEventData.capacity > 0 && spotsAvailable < 1) {
+                            occurrenceElement.classList.add('no-spots');
+                        }
+
+                        occurrenceElement.innerHTML = `
+                            <input type="checkbox" class="occurrence-checkbox" value="${occurrence.occurrence_id}">
+                            <div class="occurrence-info">
+                                ${formattedStartDate} to ${formattedEndDate}
+                            </div> 
+                            <div class="participants">
+                                (${globalEventData.capacity > 0 ? spotsAvailable + ' Spots Available' : 'Unlimited Spots Available'})
+                            </div>
+                        `;
+
+                        occurrencesContainer.appendChild(occurrenceElement);
                     });
-            }
+
+                    // Apply participation rule logic
+                    applyParticipationRule(globalEventData.participation_rule);
+                })
+                .catch(error => {
+                    console.error('Error fetching occurrences:', error);
+                });
         })
-        .catch(error => console.error('Error fetching event details:', error))
+        .then(() => {
+            // Fetch event costs
+            return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-costs.php?event_data_id=${globalEventData.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+                .then(response => response.json())
+                .then(data => {
+                    let costsContainer = document.querySelector('#costs-container');
+                    costsContainer.innerHTML = ''; // Clear any previous content
+
+                    // Loop through each cost and create the display elements
+                    data.event_costs.forEach(cost => {
+                        if (cost.historic == 0) { // Only show costs that are not historic
+                            // Create a container for each cost item
+                            let costElement = document.createElement('div');
+                            costElement.classList.add('cost-item'); // Add a class for styling
+
+                            // Create the content of each cost item
+                            costElement.innerHTML = `
+                                <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
+                                <div class="cost-amount">$${cost.cost_amount}</div>
+                                <label for="attending-${cost.cost_id}">Number Attending:</label>
+                                <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="0" class="attending-input">
+                            `;
+
+                            // Append the cost element to the container
+                            costsContainer.appendChild(costElement);
+                        }
+                    });
+
+                    // Create a div to display the total cost
+                    totalCostDisplay = document.createElement('div');
+                    totalCostDisplay.id = 'total-cost-display';
+                    totalCostDisplay.textContent = 'Your total cost is $0.00 for 0 Events';  // Initial message
+                    costsContainer.appendChild(totalCostDisplay);
+                })
+                .catch(error => {
+                    console.error('Error fetching costs:', error);
+                });
+        })
+        .then(() => {
+            displayDisclaimers(globalEventData, globalEventData);
+        })
+        .catch(error => console.error('Error in booking process:', error))
         .finally(() => {
             document.body.style.cursor = 'default'; // Reset cursor after fetch completes
         });
-    
+
     document.getElementById('event-attendance').style.display = 'block';
     document.getElementById('existing-booking-container').style.display = 'none';
 
     addListeners();
-
 });
 
 function addListeners() {
@@ -640,7 +705,7 @@ function submitBooking(formData) {
         return;
     }
 
-    // Send data via AJAX to PHP endpoint
+    document.body.style.cursor = 'wait'; // Set cursor before fetch starts
     fetch('/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/submit-event-booking.php', {
         method: 'POST',
         body: formData
@@ -655,6 +720,9 @@ function submitBooking(formData) {
     })
     .catch(error => {
         console.error('Error:', error);
+    })
+    .finally(() => {
+        document.body.style.cursor = 'default'; // Reset cursor after fetch completes
     });
 }
     
@@ -735,7 +803,7 @@ function submitWaitList(formData) {
         return;
     }
 
-    // Send data via AJAX to PHP endpoint
+    document.body.style.cursor = 'wait'; // Set cursor before fetch starts
     fetch('/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/submit-waitlist-booking.php', {
         method: 'POST',
         body: formData
@@ -750,6 +818,9 @@ function submitWaitList(formData) {
     })
     .catch(error => {
         console.error('Error:', error);
+    })
+    .finally(() => {
+        document.body.style.cursor = 'default'; // Reset cursor after fetch completes
     });
 }
 
@@ -767,28 +838,15 @@ function showExistingBookingContainer() {
     if (existingBookingContainer) {
         existingBookingContainer.style.display = 'block';
         document.getElementById('event-attendance').style.display = 'none';
+        if(waitListBooking) {
+            findButton.textContent = 'Retrieve Wait List Booking';
+            deleteButton.textContent = 'Delete Wait List Booking';
+        }
     }
 
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
-    // Need to fetch event data
-    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success && data.data.length > 0) {
-                const event = data.data[0];
-                createFormFields(event);
-            }
-        })
-        .catch(error => console.error('Error fetching event details:', error))
-        .finally(() => {
-            document.body.style.cursor = 'default'; // Reset cursor after fetch completes
-        });
+    createFormFields(globalEventData);
 }
 
 document.getElementById('retrieve-booking').addEventListener('click', function(event) {
@@ -802,9 +860,6 @@ document.getElementById('retrieve-booking').addEventListener('click', function(e
 existingBookingForm.addEventListener('submit', function (event) {
     event.preventDefault();
     existingRecord = true;
-
-    const bookingRef = document.getElementById('booking_ref').value;
-    waitListBooking = bookingRef.startsWith("WL#");
 
     // Prepare form data
     const formData = new FormData(this);
@@ -870,11 +925,11 @@ function fetchBooking(url, formData) {
 
 
 // Delete a booking functionality
-existingBookingForm.addEventListener('button', function (event) {
+deleteButton.addEventListener('click', function (event) {
     event.preventDefault();
     existingRecord = true;
     // Prepare form data
-    const formData = new FormData(this);
+    const formData = new FormData(existingBookingForm);
     const eventDataId = document.querySelector('#hidden_event_data input[name="event_data_id"]');
     if (eventDataId) {
         formData.append('event_data_id', eventDataId.value);
@@ -883,41 +938,56 @@ existingBookingForm.addEventListener('button', function (event) {
     // Add the nonce
     formData.append('delete_existing_event_nonce', document.querySelector('#delete_existing_event_nonce').value);
 
-    // Change cursor and disable submit button to prevent multiple clicks
-    document.body.style.cursor = 'wait';
-    deleteButton.disabled = true;
-    deleteButton.style.cursor = 'wait';
-    fetch('/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/delete-event-booking.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Display success message
-            alert('Booking deleted successfully!');
-            // Optionally hide the form or refresh the page
-            existingBookingForm.reset();
-            document.querySelector('#existing-booking-container').style.display = 'none';
-            
-        } else {
-            alert(data.error || 'Booking delete unsuccessful.');
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting booking:', error);
-        alert('An error occurred while deleting the booking. Please try again.');
-    })
-    .finally(() => {
-        document.body.style.cursor = 'default'; // Reset cursor after delete completes
-        deleteButton.disabled = false;
-        deleteButton.style.cursor = 'default';
-    });
+    if (confirm(`Are you sure you want to delete the booking?`)) {
+
+        // Change cursor and disable submit button to prevent multiple clicks
+        document.body.style.cursor = 'wait';
+        deleteButton.disabled = true;
+        deleteButton.style.cursor = 'wait';
+
+        // Determine the correct URL based on whether it's a waitlist booking
+        const url = waitListBooking
+            ? '/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/delete-waitlist-booking.php'
+            : '/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/delete-event-booking.php';
+
+        console.log("delete URL: ", url);
+        console.log('formData:', Object.fromEntries(formData));
+
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Display success message
+                alert(waitListBooking ? 'Wait List deleted successfully!' : 'Booking deleted successfully!');
+                // Optionally hide the form or refresh the page
+                existingBookingForm.reset();
+                document.querySelector('#existing-booking-container').style.display = 'none';
+
+                // Refresh the page without parameters
+                location.href = location.pathname;
+                
+            } else {
+                alert(data.message || (waitListBooking ? 'Wait List delete unsuccessful' : 'Booking delete unsuccessful.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting booking:', error);
+            alert('An error occurred while deleting the booking. Please try again.');
+        })
+        .finally(() => {
+            document.body.style.cursor = 'default'; // Reset cursor after delete completes
+            deleteButton.disabled = false;
+            deleteButton.style.cursor = 'default';
+        });
+    }
 });
 
 function populateBookingFormFields(booking) {
@@ -1027,8 +1097,9 @@ function displayOccurrences(booking, futureOccurrences, pastOccurrences) {
     });
 
     hasFutureOccurrences = false;
-    if(booking.historic == 0) { //Only display future occurrences if booking is not historic
+    if(booking.historic == 0 || waitListBooking) { //Only display future occurrences if booking is not historic or is in a Wait List
         // Fetch event occurrences and display possible future occurrences
+        console.log("Post Id: ", globalEventData.post_id);
         fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
             .then(response => response.json())
             .then(data => {
@@ -1077,14 +1148,14 @@ function displayOccurrences(booking, futureOccurrences, pastOccurrences) {
                     occurrencesContainer.appendChild(occurrenceElement);
                 });
 
-                adjustBookingButton();
+                adjustBookingButtons();
 
             })
             .catch(error => {
                 console.error('Error fetching occurrences:', error);
             });
     } else {
-        adjustBookingButton();
+        adjustBookingButtons();
     }
 
 }
@@ -1151,13 +1222,25 @@ function displayDisclaimers(booking, event) {
             }
         })
         .catch(error => {
-            console.error('Error fetching disclaimers:', error);
+            console.error('Error fetching disclaimers:', error); 
         });
 }
 
 // Function to adjust the button label and state
-function adjustBookingButton() {
-    const submitButton = document.querySelector('#attendance-form button[type="submit"]');
+function adjustBookingButtons() {
+    const submitButton = document.querySelector('#attendance-form button[type="submit"][value="book"]');
+    const waitlistButton = document.querySelector('#attendance-form button[type="submit"][value="waitlist"]');
+
+    if (waitlistButton) {
+        // Do not display the 'Add to Wait List' button if it is an existing record that is not already a waitlist booking
+        if (existingRecord && !waitListBooking) {
+            waitlistButton.style.display = 'none';
+        } else {
+            waitlistButton.style.display = 'inline-block'; // Ensure it's visible if conditions allow
+            waitlistButton.textContent = existingRecord ? 'Update Wait List' : 'Add to Wait List';
+        }
+    }
+
     if (submitButton) {
         if (!hasFutureOccurrences) {
             // Disable the button and set the message for past bookings
@@ -1166,10 +1249,20 @@ function adjustBookingButton() {
         } else {
             // Enable the button and adjust text based on `existingRecord`
             submitButton.disabled = false;
-            submitButton.textContent = existingRecord ? 'Update Event Booking' : 'Book Event';
+            if(existingRecord && waitListBooking && !isEventStaff){
+                submitButton.style.display = 'none';
+            }
+            else if(existingRecord && waitListBooking && isEventStaff){
+                submitButton.style.display = 'inline-block';
+                submitButton.textContent = 'Transfer Wait List to a Booking';
+            }
+            else {
+                submitButton.textContent = existingRecord ? 'Update Event Booking' : 'Book Event';
+            }
         }
     }
 }
+
 
 function createFormFields(event) {
     globalEventData = event;

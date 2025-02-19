@@ -136,6 +136,7 @@ function handleExistingBooking($wpdb, $event_data_id, $booking_reference) {
 
         // Commit the transaction if everything succeeded
         $wpdb->query('COMMIT');
+        sendResponse(true, 'Event Booking Deleted Successfully!');
     } catch (Exception $e) {
         // Roll back the transaction on any error
         $wpdb->query('ROLLBACK');

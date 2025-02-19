@@ -23,6 +23,7 @@ $capacity_override = isset($_POST['capacity_override']) ? intval($_POST['capacit
 
 $new_booking_reference = sanitize_text_field($_POST['new_booking_reference']);
 $existing_booking_reference = sanitize_text_field($_POST['existing_booking_reference']);
+$fromWaitListBooking = strpos($existing_booking_reference, "WL#") === 0;
 $existing_record = sanitize_text_field($_POST['existing_record']) === 'true';
 $costs = json_decode(stripslashes($_POST['costs']), true);
 $occurrences = json_decode(stripslashes($_POST['occurrences']), true);
@@ -38,6 +39,24 @@ if ($capacity_override > 0){
 
 // Start a database transaction for safety
 $wpdb->query('START TRANSACTION');
+
+//If we're saving a booking that was originally on a wait list we can delte the waitlist entry
+if($fromWaitListBooking){
+    $delete_result = $wpdb->query($wpdb->prepare(
+        "DELETE FROM {$wpdb->prefix}leanwi_event_waitlist_booking WHERE booking_reference = %s",
+        $existing_booking_reference
+    ));
+    // Check if deletion was successful
+    if ($delete_result === false) {
+        $wpdb->query('ROLLBACK');
+        sendResponse(false, 'Failed to delete the wait list booking.');
+    } elseif ($delete_result === 0) {
+        $wpdb->query('ROLLBACK');
+        sendResponse(false, 'No matching wait list booking found.');
+    }
+
+    $existing_record = false; // It's actually a new Event Booking so treat it as such
+}
 
 // Handle existing or new booking
 if ($existing_record) {
