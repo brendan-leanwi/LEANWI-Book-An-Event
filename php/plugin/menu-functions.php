@@ -391,6 +391,18 @@ function leanwi_add_event_page() {
             $booking_before_hours = isset($_POST['booking_before_hours']) ? intval($_POST['booking_before_hours']) : 0;
             $cancellation_before_hours = isset($_POST['cancellation_before_hours']) ? intval($_POST['cancellation_before_hours']) : 0;
 
+            $register_by_date = !empty($_POST['register_by_date']) ? sanitize_text_field($_POST['register_by_date']) : NULL;
+            $virtual_event_rule = wp_kses_post($_POST['virtual_event_rule']);
+            $virtual_event_rule = wp_unslash($virtual_event_rule);
+            $virtual_event_url = esc_url($_POST['virtual_event_url']);
+            $virtual_event_password = wp_kses_post($_POST['virtual_event_password']);
+            $virtual_event_password = wp_unslash($virtual_event_password);
+            $event_admin_email = isset($_POST['event_admin_email']) ? sanitize_email($_POST['event_admin_email']) : '';
+            $include_virtual_bookings_in_capacity_calc = isset($_POST['include_virtual_bookings_in_capacity_calc']) ? 1 : 0;
+            $include_special_notes = isset($_POST['include_special_notes']) ? 1 : 0;
+            $include_physical_address = isset($_POST['include_physical_address']) ? 1 : 0;
+            $include_zipcode = isset($_POST['include_zipcode']) ? 1 : 0;
+
             // Insert the new event into the database
             $inserted = $wpdb->insert(
                 $data_table,
@@ -404,6 +416,15 @@ function leanwi_add_event_page() {
                     'audience_id' => $audience_id,
                     'booking_before_hours' => $booking_before_hours,
                     'cancellation_before_hours' => $cancellation_before_hours,
+                    'register_by_date' => $register_by_date,
+                    'virtual_event_rule' => $virtual_event_rule,
+                    'virtual_event_url' => $virtual_event_url,
+                    'virtual_event_password' => $virtual_event_password,
+                    'event_admin_email' => $event_admin_email,
+                    'include_virtual_bookings_in_capacity_calc' => $include_virtual_bookings_in_capacity_calc,
+                    'include_special_notes' => $include_special_notes,
+                    'include_physical_address' => $include_physical_address,
+                    'include_zipcode' => $include_zipcode,
                 )
             );
 
@@ -414,13 +435,21 @@ function leanwi_add_event_page() {
                 // Insert costs into the database
                 if (!empty($_POST['cost_name']) && !empty($_POST['cost_amount'])) {
                     foreach ($_POST['cost_name'] as $key => $cost_name) {
+                        $cost_name = wp_kses_post($cost_name);
+                        $cost_name = wp_unslash($cost_name);
                         $cost_amount = floatval($_POST['cost_amount'][$key]);
+                        $include_extra_info = isset($_POST['include_extra_info'][$key]) ? 1 : 0;
+                        $extra_info_label = wp_kses_post($_POST['extra_info_label'][$key]);
+                        $extra_info_label = wp_unslash($extra_info_label);
+
                         $wpdb->insert(
                             $cost_table,
                             array(
                                 'event_data_id' => $event_data_id,
-                                'cost_name' => sanitize_text_field($cost_name),
+                                'cost_name' => $cost_name,
                                 'cost_amount' => $cost_amount,
+                                'include_extra_info' => $include_extra_info,
+                                'extra_info_label' => $extra_info_label,
                             )
                         );
                     }
@@ -430,7 +459,8 @@ function leanwi_add_event_page() {
                 if (!empty($_POST['disclaimer']) && is_array($_POST['disclaimer'])) {
                     foreach ($_POST['disclaimer'] as $disclaimer_id) {
                         // Fetch the disclaimer text
-                        $disclaimer_text = sanitize_text_field($_POST['disclaimer_text_' . $disclaimer_id]);
+                        $disclaimer_text = wp_kses_post($_POST['disclaimer_text_' . $disclaimer_id]);
+                        $disclaimer_text = wp_unslash($disclaimer_text);
 
                         // Insert the disclaimer into the event_disclaimer table
                         $wpdb->insert(
@@ -465,7 +495,16 @@ function leanwi_add_event_page() {
         'audience' => '',
         'participation_rule' => 'any',
         'cancellation_before_hours' => '0',
-        'booking_before_hours' => '0'
+        'booking_before_hours' => '0',
+        'register_by_date' => '',
+        'virtual_event_rule' => 'no',
+        'virtual_event_url' => '',
+        'virtual_event_password' => '',
+        'event_admin_email' => '',
+        'include_virtual_bookings_in_capacity_calc' => 0,
+        'include_special_notes' => 0,
+        'include_physical_address' => 0,
+        'include_zipcode' => 0
     ];
 
     // Fetch unused events so that latest events end up at the top
@@ -579,14 +618,44 @@ function leanwi_add_event_page() {
                 <tr>
                     <th><label for="capacity">Capacity</label></th>
                     <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /> Enter 0 (zero) to indicate unlimited capacity.</td>
+                </tr>               
+                <tr>
+                    <th><label for="register_by_date">Any/All occurrences of this event must be registered by:</label></th>
+                    <td><input type="date" id="register_by_date" name="register_by_date" value="<?php echo esc_attr($event->register_by_date); ?>"/> Leaving blank means no register by date is needed.</td>
                 </tr>
                 <tr>
                     <th><label for="booking_before_hours">Hours away from event that a booking is allowed</label></th>
-                    <td><input type="number" id="booking_before_hours" name="booking_before_hours" value="<?php echo esc_attr($event->booking_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be placed up to the time of the event.</td>
+                    <td><input type="number" id="booking_before_hours" name="booking_before_hours" value="<?php echo esc_attr($event->booking_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be placed up to the time of the event occurrence.</td>
                 </tr>
                 <tr>
                     <th><label for="cancellation_before_hours">Hours away from event that a cancellation is allowed</label></th>
-                    <td><input type="number" id="cancellation_before_hours" name="cancellation_before_hours" value="<?php echo esc_attr($event->cancellation_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be cancelled up to the time of the event.</td>
+                    <td><input type="number" id="cancellation_before_hours" name="cancellation_before_hours" value="<?php echo esc_attr($event->cancellation_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be cancelled up to the time of the event occurrence.</td>
+                </tr>
+                <tr>
+                    <th><label for="virtual_event_rule">Select the virtual event rule</label></th>
+                    <td>
+                        <select id="virtual_event_rule" name="virtual_event_rule" required>
+                            <option value="no" <?php selected($event->virtual_event_rule, 'no'); ?>>No virtual event option</option>
+                            <option value="only" <?php selected($event->virtual_event_rule, 'only'); ?>>Is only a virtual event</option>
+                            <option value="optional" <?php selected($event->virtual_event_rule, 'optional'); ?>>Optionally attend in-person or virtual</option>
+                            <option value="specify" <?php selected($event->virtual_event_rule, 'specify'); ?>>Attendee must specify in-person or virtual</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="include_virtual_bookings_in_capacity_calc">Include virtual bookings when calculating capacity?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_virtual_bookings_in_capacity_calc" name="include_virtual_bookings_in_capacity_calc" <?php echo ($event->include_virtual_bookings_in_capacity_calc == 1) ? 'checked' : ''; ?>/>
+                        This option is only used if the 'Attendee must specify in-person or virtual' option has been selected above.
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="virtual_event_url">URL link to access the virtual event</label></th>
+                    <td><input type="text" id="virtual_event_url" name="virtual_event_url" value="<?php echo esc_attr($event->virtual_event_url); ?>" required style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="virtual_event_password">Password to access the virtual event</label></th>
+                    <td><input type="text" id="virtual_event_password" name="virtual_event_password" value="<?php echo esc_attr($event->virtual_event_password); ?>" style="width: 90%;" /></td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>
@@ -614,6 +683,29 @@ function leanwi_add_event_page() {
                         </select>
                     </td>
                 </tr>
+                <tr>
+                    <th><label for="event_admin_email">Event Admin Email</label></th>
+                    <td><input type="email" id="event_admin_email" name="event_admin_email" style="width: 90%;" value="<?php echo esc_attr($event->event_admin_email); ?>" /></td>
+                </tr>
+                <tr>
+                    <th><label for="include_special_notes">Allow users to add notes to their booking?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_special_notes" name="include_special_notes" <?php echo ($event->include_special_notes == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="include_physical_address">Users must enter a physical address when booking?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_physical_address" name="include_physical_address" <?php echo ($event->include_physical_address == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="include_zipcode">Users must enter a zipcode when booking?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_zipcode" name="include_zipcode" <?php echo ($event->include_zipcode == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+
 
                 <!-- Dynamic costs section -->
                 <tr>
@@ -664,6 +756,13 @@ function leanwi_add_event_page() {
                     <label for="cost_amount_${costCount}">Cost Amount $</label>
                     <input type="number" name="cost_amount[]" id="cost_amount_${costCount}" required step="0.01" min="0" />
                     
+                    <label for="include_extra_info_${costCount}">Include extra info?</label>
+                    <input type="hidden" name="include_extra_info[${costCount}]" value="0"> 
+                    <input type="checkbox" id="include_extra_info_${costCount}" name="include_extra_info[${costCount}]" value="1" />
+
+                    <label for="extra_info_label_${costCount}">Extra Info Label</label>
+                    <input type="text" name="extra_info_label[]" id="extra_info_label_${costCount}" />
+
                     <button type="button" onclick="removeCost(${costCount})" class="button">Remove Cost</button>
                 </div>
             `;
@@ -744,10 +843,23 @@ function leanwi_edit_event_page() {
             $capacity = isset($_POST['capacity']) ? intval($_POST['capacity']) : 0;
             $category_id = isset($_POST['category_id']) ? intval($_POST['category_id']) : 1;
             $audience_id = isset($_POST['audience_id']) ? intval($_POST['audience_id']) : 1;
-            $historic = isset($_POST['historic']) ? 1 : 0;
             $participation_rule = esc_html($_POST['participation_rule']);
             $booking_before_hours = isset($_POST['booking_before_hours']) ? intval($_POST['booking_before_hours']) : 0;
             $cancellation_before_hours = isset($_POST['cancellation_before_hours']) ? intval($_POST['cancellation_before_hours']) : 0;
+
+            $register_by_date = !empty($_POST['register_by_date']) ? sanitize_text_field($_POST['register_by_date']) : NULL;
+            $virtual_event_rule = wp_kses_post($_POST['virtual_event_rule']);
+            $virtual_event_rule = wp_unslash($virtual_event_rule);
+            $virtual_event_url = esc_url($_POST['virtual_event_url']);
+            $virtual_event_password = wp_kses_post($_POST['virtual_event_password']);
+            $virtual_event_password = wp_unslash($virtual_event_password);
+            $event_admin_email = isset($_POST['event_admin_email']) ? sanitize_email($_POST['event_admin_email']) : '';
+            $include_virtual_bookings_in_capacity_calc = isset($_POST['include_virtual_bookings_in_capacity_calc']) ? 1 : 0;
+            $include_special_notes = isset($_POST['include_special_notes']) ? 1 : 0;
+            $include_physical_address = isset($_POST['include_physical_address']) ? 1 : 0;
+            $include_zipcode = isset($_POST['include_zipcode']) ? 1 : 0;
+            $historic = isset($_POST['historic']) ? 1 : 0;
+
 
             // Update the event in the database
             $updated = $wpdb->update(
@@ -756,13 +868,22 @@ function leanwi_edit_event_page() {
                     'post_id' => $post_id,
                     'event_url' => $event_url,
                     'event_image' => $event_image,
+                    'participation_rule' => $participation_rule,
                     'capacity' => $capacity,
                     'category_id' => $category_id,
                     'audience_id' => $audience_id,
-                    'historic' => $historic,
-                    'participation_rule' => $participation_rule,
                     'booking_before_hours' => $booking_before_hours,
                     'cancellation_before_hours' => $cancellation_before_hours,
+                    'register_by_date' => $register_by_date,
+                    'virtual_event_rule' => $virtual_event_rule,
+                    'virtual_event_url' => $virtual_event_url,
+                    'virtual_event_password' => $virtual_event_password,
+                    'event_admin_email' => $event_admin_email,
+                    'include_virtual_bookings_in_capacity_calc' => $include_virtual_bookings_in_capacity_calc,
+                    'include_special_notes' => $include_special_notes,
+                    'include_physical_address' => $include_physical_address,
+                    'include_zipcode' => $include_zipcode,
+                    'historic' => $historic,
                 ),
                 array('event_data_id' => $event_data_id)
             );
@@ -771,8 +892,13 @@ function leanwi_edit_event_page() {
             if (isset($_POST['cost_name']) && isset($_POST['cost_amount'])) {
                 // Loop through cost names, amounts, and historic checkboxes
                 foreach ($_POST['cost_name'] as $key => $cost_name) {
-                    $cost_name = sanitize_text_field($cost_name);
+                    $cost_name = wp_kses_post($cost_name);
+                    $cost_name = wp_unslash($cost_name);
                     $cost_amount = floatval($_POST['cost_amount'][$key]);
+                    $include_extra_info = isset($_POST['include_extra_info'][$key]) ? intval($_POST['include_extra_info'][$key]) : 0;
+
+                    $extra_info_label = wp_kses_post($_POST['extra_info_label'][$key]);
+                    $extra_info_label = wp_unslash($extra_info_label);
                     $cost_historic = isset($_POST['cost_historic'][$key]) ? 1 : 0;
                     
                     // Format the cost amount to two decimal places
@@ -788,6 +914,8 @@ function leanwi_edit_event_page() {
                             array(
                                 'cost_name' => $cost_name,
                                 'cost_amount' => $cost_amount,
+                                'include_extra_info' => $include_extra_info,
+                                'extra_info_label' => $extra_info_label,
                                 'historic' => $cost_historic,
                             ),
                             array('cost_id' => $cost_id)
@@ -800,6 +928,8 @@ function leanwi_edit_event_page() {
                                 'event_data_id' => $event_data_id,
                                 'cost_name' => $cost_name,
                                 'cost_amount' => $cost_amount,
+                                'include_extra_info' => $include_extra_info,
+                                'extra_info_label' => $extra_info_label,
                                 'historic' => $cost_historic,
                             )
                         );
@@ -928,12 +1058,42 @@ function leanwi_edit_event_page() {
                     <td><input type="number" id="capacity" name="capacity" value="<?php echo esc_attr($event->capacity); ?>" required /> Enter 0 (zero) to indicate unlimited capacity.</td>
                 </tr>
                 <tr>
+                    <th><label for="register_by_date">Any/All occurrences of this event must be registered by:</label></th>
+                    <td><input type="date" id="register_by_date" name="register_by_date" value="<?php echo esc_attr($event->register_by_date); ?>"/> Leaving blank means no register by date is needed.</td>
+                </tr>
+                <tr>
                     <th><label for="booking_before_hours">Hours away from event that a booking is allowed</label></th>
-                    <td><input type="number" id="booking_before_hours" name="booking_before_hours" value="<?php echo esc_attr($event->booking_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be placed up to the time of the event.</td>
+                    <td><input type="number" id="booking_before_hours" name="booking_before_hours" value="<?php echo esc_attr($event->booking_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be placed up to the time of the event occurrence.</td>
                 </tr>
                 <tr>
                     <th><label for="cancellation_before_hours">Hours away from event that a cancellation is allowed</label></th>
-                    <td><input type="number" id="cancellation_before_hours" name="cancellation_before_hours" value="<?php echo esc_attr($event->cancellation_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be cancelled up to the time of the event.</td>
+                    <td><input type="number" id="cancellation_before_hours" name="cancellation_before_hours" value="<?php echo esc_attr($event->cancellation_before_hours); ?>" required /> Enter 0 (zero) to indicate a booking may be cancelled up to the time of the event occurrence.</td>
+                </tr>
+                <tr>
+                    <th><label for="virtual_event_rule">Select the virtual event rule</label></th>
+                    <td>
+                        <select id="virtual_event_rule" name="virtual_event_rule" required>
+                            <option value="no" <?php selected($event->virtual_event_rule, 'no'); ?>>No virtual event option</option>
+                            <option value="only" <?php selected($event->virtual_event_rule, 'only'); ?>>Is only a virtual event</option>
+                            <option value="optional" <?php selected($event->virtual_event_rule, 'optional'); ?>>Optionally attend in-person or virtual</option>
+                            <option value="specify" <?php selected($event->virtual_event_rule, 'specify'); ?>>Attendee must specify in-person or virtual</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="include_virtual_bookings_in_capacity_calc">Include virtual bookings when calculating capacity?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_virtual_bookings_in_capacity_calc" name="include_virtual_bookings_in_capacity_calc" <?php echo ($event->include_virtual_bookings_in_capacity_calc == 1) ? 'checked' : ''; ?>/>
+                        This option is only used if the 'Attendee must specify in-person or virtual' option has been selected above.
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="virtual_event_url">URL link to access the virtual event</label></th>
+                    <td><input type="text" id="virtual_event_url" name="virtual_event_url" value="<?php echo esc_attr($event->virtual_event_url); ?>" required style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="virtual_event_password">Password to access the virtual event</label></th>
+                    <td><input type="text" id="virtual_event_password" name="virtual_event_password" value="<?php echo esc_attr($event->virtual_event_password); ?>" style="width: 90%;" /></td>
                 </tr>
                 <tr>
                     <th><label for="category">Category</label></th>
@@ -941,24 +1101,50 @@ function leanwi_edit_event_page() {
                         <select id="category" name="category_id" required>
                             <option value="">Select a category</option>
                             <?php foreach ($categories as $category): ?>
-                                <option value="<?php echo esc_attr($category->category_id); ?>" <?php selected($category->category_id, $event->category_id); ?>>
+                                <option value="<?php echo esc_attr($category->category_id); ?>" 
+                                    <?php echo ($category->category_id == $event->category_id) ? 'selected' : ''; ?>>
                                     <?php echo esc_html($category->category_name); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </td>
                 </tr>
+
                 <tr>
                     <th><label for="audience">Audience</label></th>
                     <td>
                         <select id="audience" name="audience_id" required>
                             <option value="">Select an audience</option>
                             <?php foreach ($audiences as $audience): ?>
-                                <option value="<?php echo esc_attr($audience->audience_id); ?>" <?php selected($audience->audience_id, $event->audience_id); ?>>
+                                <option value="<?php echo esc_attr($audience->audience_id); ?>" 
+                                    <?php echo ($audience->audience_id == $event->audience_id) ? 'selected' : ''; ?>>
                                     <?php echo esc_html($audience->audience_name); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th><label for="event_admin_email">Event Admin Email</label></th>
+                    <td><input type="email" id="event_admin_email" name="event_admin_email" style="width: 90%;" value="<?php echo esc_attr($event->event_admin_email); ?>" /></td>
+                </tr>
+                <tr>
+                    <th><label for="include_special_notes">Allow users to add notes to their booking?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_special_notes" name="include_special_notes" <?php echo ($event->include_special_notes == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="include_physical_address">Users must enter a physical address when booking?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_physical_address" name="include_physical_address" <?php echo ($event->include_physical_address == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="include_zipcode">Users must enter a zipcode when booking?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_zipcode" name="include_zipcode" <?php echo ($event->include_zipcode == 1) ? 'checked' : ''; ?>/>
                     </td>
                 </tr>
                 <tr>
@@ -974,6 +1160,16 @@ function leanwi_edit_event_page() {
 
                                     <label for="cost_amount_<?php echo $index; ?>">Cost Amount</label>
                                     <input type="number" name="cost_amount[]" id="cost_amount_<?php echo $index; ?>" value="<?php echo esc_attr($cost->cost_amount); ?>" required step="0.01" min="0" />
+
+                                    <label for="include_extra_info_<?php echo $index; ?>">Include extra info?</label>
+                                    <input type="hidden" name="include_extra_info[<?php echo $index; ?>]" value="0">
+                                    <input type="checkbox" id="include_extra_info_<?php echo $index; ?>" name="include_extra_info[<?php echo $index; ?>]" 
+                                        value="1" <?php echo $cost->include_extra_info ? 'checked' : ''; ?> />
+
+                                    <label for="extra_info_label_<?php echo $index; ?>">Extra Info Label</label>
+                                    <input type="text" name="extra_info_label[]" id="extra_info_label_<?php echo $index; ?>" 
+                                        value="<?php echo esc_attr($cost->extra_info_label); ?>" />
+
 
                                     <label for="cost_historic_<?php echo $index; ?>">Removed from Use</label>
                                     <input type="checkbox" name="cost_historic[]" id="cost_historic_<?php echo $index; ?>" <?php echo $cost->historic ? 'checked' : ''; ?> />
@@ -1035,6 +1231,15 @@ function leanwi_edit_event_page() {
 
                 <label for="cost_amount_${costIndex}">Cost Amount</label>
                 <input type="number" name="cost_amount[]" id="cost_amount_${costIndex}" required step="0.01" min="0" />
+
+                
+                <label for="include_extra_info_${costCount}">Include extra info?</label>
+                <input type="hidden" name="include_extra_info[${costCount}]" value="0"> 
+                <input type="checkbox" id="include_extra_info_${costCount}" name="include_extra_info[${costCount}]" value="1" />
+
+
+                <label for="extra_info_label_${costCount}">Extra Info Label</label>
+                <input type="text" name="extra_info_label[]" id="extra_info_label_${costCount}" />
 
                 <label for="cost_historic_${costIndex}">Removed from Use</label>
                 <input type="checkbox" name="cost_historic[]" id="cost_historic_${costIndex}" />

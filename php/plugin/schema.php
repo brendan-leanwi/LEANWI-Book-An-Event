@@ -39,18 +39,15 @@ function leanwi_event_create_tables() {
         audience_id INT NOT NULL,
         booking_before_hours INT DEFAULT 0,
         cancellation_before_hours INT DEFAULT 0,
-        
-        /* NEW */
-        register_by_date VARCHAR(19),
+        register_by_date DATE NULL,
+        virtual_event_rule VARCHAR(6),
         virtual_event_url CHAR(255),
         virtual_event_password VARCHAR(25),
         event_admin_email VARCHAR(255),
-
-        /* NEW */
+        include_virtual_bookings_in_capacity_calc TINYINT(1) DEFAULT 0,
         include_special_notes TINYINT(1) DEFAULT 0,
         include_physical_address TINYINT(1) DEFAULT 0,
-        inclide_zipcode TINYINT(1) DEFAULT 0,
-
+        include_zipcode TINYINT(1) DEFAULT 0,
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (category_id) REFERENCES  {$wpdb->prefix}leanwi_event_category(category_id),
         FOREIGN KEY (audience_id) REFERENCES  {$wpdb->prefix}leanwi_event_audience(audience_id)
@@ -62,11 +59,8 @@ function leanwi_event_create_tables() {
         event_data_id INT NOT NULL,
         cost_name VARCHAR(50) NOT NULL,
         cost_amount DECIMAL(10, 2) NOT NULL,
-        
-        /* NEW */
         include_extra_info TINYINT(1) DEFAULT 0,
         extra_info_label CHAR(255),
-
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
@@ -80,12 +74,9 @@ function leanwi_event_create_tables() {
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         total_participants INT NOT NULL,
-
-        /* NEW */
         special_notes VARCHAR(255),
         physical_address VARCHAR(255),
         zipcode VARCHAR(10),
-
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
@@ -95,10 +86,7 @@ function leanwi_event_create_tables() {
         booking_id INT NOT NULL,
         cost_id INT NOT NULL,
         number_of_participants INT NOT NULL,
-
-        /* NEW */
         extra_info VARCHAR(255),
-
         payment_received TINYINT(1) DEFAULT 0,
         FOREIGN KEY (booking_id) REFERENCES {$wpdb->prefix}leanwi_event_booking(booking_id) ON DELETE CASCADE,
         FOREIGN KEY (cost_id) REFERENCES {$wpdb->prefix}leanwi_event_cost(cost_id) ON DELETE CASCADE
