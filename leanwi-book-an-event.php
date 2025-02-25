@@ -29,17 +29,72 @@ register_uninstall_hook(__FILE__, __NAMESPACE__ . '\\leanwi_event_drop_tables');
 // Register the JavaScript files
 function leanwi_event_enqueue_scripts() {
     if (is_singular() && has_shortcode(get_post()->post_content, 'leanwi_event_details')) {
+
         wp_register_script(
-            'event-booking-js',
-            plugin_dir_url(__FILE__) . 'js/event-booking.js',
+            'event-booking-initial-load-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-initial-load.js',
             array('jquery'),
-            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking.js'),
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-initial-load.js'),
+            true
+        );
+
+        wp_register_script(
+            'event-booking-admin-functionality-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-admin-functionality.js',
+            array('jquery', 'event-booking-initial-load-js'), // Ensure correct dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-admin-functionality.js'),
+            true
+        );
+
+        wp_register_script(
+            'event-booking-new-functionality-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-new-functionality.js',
+            array('jquery', 'event-booking-initial-load-js'), // Ensure correct dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-new-functionality.js'),
+            true
+        );
+
+        wp_register_script(
+            'event-booking-waitlist-functionality-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-waitlist-functionality.js',
+            array('jquery', 'event-booking-initial-load-js'), // Ensure correct dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-waitlist-functionality.js'),
+            true
+        );
+
+        wp_register_script(
+            'event-booking-existing-functionality-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-existing-functionality.js',
+            array('jquery', 'event-booking-initial-load-js'), // Ensure correct dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-existing-functionality.js'),
+            true
+        );
+
+        wp_register_script(
+            'event-booking-delete-functionality-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-delete-functionality.js',
+            array('jquery', 'event-booking-initial-load-js'), // Ensure correct dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-delete-functionality.js'),
+            true
+        );
+
+        wp_register_script(
+            'event-booking-utils-js',
+            plugin_dir_url(__FILE__) . 'js/event-booking-utils.js',
+            array('jquery', 'event-booking-initial-load-js'), // Ensure correct dependencies
+            filemtime(plugin_dir_path(__FILE__) . 'js/event-booking-utils.js'),
             true
         );
         
-        wp_enqueue_script('event-booking-js');
+        wp_enqueue_script('event-booking-initial-load-js');
+        wp_enqueue_script('event-booking-admin-functionality-js');
+        wp_enqueue_script('event-booking-new-functionality-js');
+        wp_enqueue_script('event-booking-waitlist-functionality-js');
+        wp_enqueue_script('event-booking-existing-functionality-js');
+        wp_enqueue_script('event-booking-delete-functionality-js');
+        wp_enqueue_script('event-booking-utils-js');
 
-        wp_localize_script('event-booking-js', 'leanwiVars', [
+        wp_localize_script('event-booking-initial-load-js', 'leanwiVars', [
             'ajax_nonce' => wp_create_nonce('leanwi_event_nonce')
         ]);
     }
