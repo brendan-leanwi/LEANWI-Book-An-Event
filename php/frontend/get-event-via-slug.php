@@ -54,6 +54,17 @@ if (!empty($event_slug)) {
                 'audience_id' => intval($result['audience_id']),
                 'historic' => intval($result['historic']),
                 'participation_rule' => esc_html($result['participation_rule']),
+                'booking_before_hours' => intval($result['booking_before_hours']),
+                'cancellation_before_hours' => intval($result['cancellation_before_hours']),
+                'register_by_date' => esc_html($result['register_by_date']),
+                'virtual_event_rule' => esc_html($result['virtual_event_rule']),
+                'virtual_event_url' => esc_url($result['virtual_event_url']),
+                'virtual_event_password' => sanitize_text_field($result['virtual_event_password']),
+                'event_admin_email' => sanitize_email($result['event_admin_email']),
+                'include_virtual_bookings_in_capacity_calc' => intval($result['include_virtual_bookings_in_capacity_calc']),
+                'include_special_notes' => intval($result['include_special_notes']),
+                'include_physical_address' => intval($result['include_physical_address']),
+                'include_zipcode' => intval($result['include_zipcode']),
             ];
         }, $results);
 

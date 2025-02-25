@@ -102,10 +102,36 @@ function display_event_details() {
             <input type="text" id="name" name="name" required><br />
 
             <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required><br />
+            <input type="email" id="email" name="email"><br />
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="checkbox" name="virtual_attendance" id="virtual_attendance">
+                <label for="virtual_attendance" id="virtual_attendance_label" style="display: none;">Yes, we will be attending this event virtually. (An email address is required)</label>
+            </div>
+
+            <div style="display: none; border: 1px solid black; padding: 15px; margin-bottom: 20px;" id="virtual_attendance_optional">
+                <label id="virtual_attendance_optional_label" style="display: block; text-align: center; width: 100%; display: block;">** You have the option to attend this event either in-person or virtually.<br>Instructions for attending virtually will be emailed to you. **</label>
+            </div>
+
+            <div style="display: none; border: 1px solid black; padding: 15px; margin-bottom: 20px;" id="virtual_attendance_only">
+                <label id="virtual_attendance_only_label" style="display: block; text-align: center; width: 100%; display: block;">** This is a virtual event only.<br>Instructions for attending virtually will be emailed to you. **</label>
+            </div>
 
             <label for="phone">Phone:</label>
             <input type="phone" id="phone" name="phone"><br />
+
+            <label for="physical_address" id="physical_address_label" style="display: none;">Physical Address:</label>
+            <input type="text" id="physical_address" name="physical_address" style="width: 100%; padding: 8px; margin-bottom: 10px; display: none;">
+
+            <label for="zipcode" id="zipcode_label" style="display: none;">
+                Zipcode: 
+                <span class="info-icon" title="We need this information to confirm that you are a local resident. Please contact us before making a booking if you are not a local resident."></span>
+            </label>
+            <input type="text" id="zipcode" name="zipcode" style="width: 100%; padding: 8px; margin-bottom: 10px; display: none;">
+
+            <label for="special_notes" id="special_notes_label" style="display: none;">Please enter any special notes: </label>
+            <textarea id="special_notes" name="special_notes" rows="3" style="width: 100%; padding: 8px; margin-bottom: 10px; display: none;"></textarea>
+
 
             <p>&nbsp;</p><!-- Spacer -->
             <p id="participation-one" style="display: none"><strong>Please select an event occurrence.</strong></p>
@@ -139,7 +165,7 @@ function display_event_details() {
     </div>
 
     <div id="sold-out"  style="display: none">
-        <h3>Sorry, this event has been sold out</h3>
+        <h3 id="sold-out-text">Sorry, this event has been sold out</h3>
     </div>
     
     <?php

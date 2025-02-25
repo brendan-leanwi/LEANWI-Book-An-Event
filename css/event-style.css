@@ -234,13 +234,20 @@ p {
 }
 
 .cost-item {
-    display: flex;
+    display: block;
     align-items: center;  /* Vertically center the content */
     margin-bottom: 15px;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
     background-color: #f9f9f9;
+}
+
+.cost-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
 }
 
 .cost-name {
@@ -253,6 +260,23 @@ p {
     color: green;
     font-size: 14px;
     margin-right: 10px;  /* Space between amount and input field */
+}
+
+.extra-info {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.extra-info label {
+    font-weight: bold;
+    font-size: 15px;
+    margin-bottom: 5px;
+}
+
+.extra-info textarea {
+    width: 100% !important;
+    resize: vertical;
 }
 
 .attending-input {
@@ -356,4 +380,26 @@ label {
     border-radius: 5px;
     font-size: .8rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#event-attendance .info-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: #007bff;
+    color: #fff;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 5px;
+    position: relative;
+}
+
+#event-attendance .info-icon::before {
+    content: "i";
+    display: inline-block;
+    font-family: Arial, sans-serif;
 }

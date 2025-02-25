@@ -59,7 +59,11 @@ if (!empty($booking_ref)) {
                     'name' => esc_html($result['name']),
                     'email' => sanitize_email($result['email']),
                     'phone' => esc_html($result['phone']),
+                    'special_notes' => esc_textarea($result['special_notes']),
+                    'physical_address' => esc_html($result['physical_address']),
+                    'zipcode' => esc_html($result['zipcode']),
                     'total_participants' => intval($result['total_participants']),
+                    'attending_virtually' => intval($result['attending_virtually']),
                     'historic' => intval($result['historic']),
                 ];
             }, $results);
@@ -82,6 +86,7 @@ if (!empty($booking_ref)) {
                         'booking_id' => $booking_id,
                         'cost_id' => intval($result['cost_id']),
                         'number_of_participants' => intval($result['number_of_participants']),
+                        'extra_info' => esc_textarea($result['extra_info']),
                         'cost_name' => esc_html($result['cost_name']), 
                         'cost_amount' => is_numeric($result['cost_amount']) ? number_format((float)$result['cost_amount'], 2, '.', '') : '0.00',
                     ];

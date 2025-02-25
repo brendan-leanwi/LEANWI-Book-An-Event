@@ -38,7 +38,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             if (data.success && data.data.length > 0) {
                 globalEventData = data.data[0];
+                console.log("Retrieved globalEventdata: ", globalEventData);
+                
+                displayOptionalFields();
 
+                if (bookingRef) {
+                    showExistingBookingContainer();
+                }
             } else {
                 throw new Error("Event data not found or invalid.");
             }
@@ -65,12 +71,110 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('existing_booking_heading').textContent = "Your Booking Reference has been Entered:";
         document.getElementById('event_attendance_heading').textContent = "Your details for attending this event";
         document.getElementById('booking-choices-container').style.display = 'none';
-
-        // Call the retrieve booking function to display the container
-        showExistingBookingContainer();
     }
 
 });
+
+function displayOptionalFields(){
+    
+    let emailInput = document.getElementById("email"); //Need this for making required later
+
+    // Get the elements
+    let addressLabel = document.getElementById("physical_address_label");
+    let addressInput = document.getElementById("physical_address");
+
+    if (globalEventData.include_physical_address === 1) {
+        // Show the fields and mark as required
+        addressLabel.style.display = "block";
+        addressInput.style.display = "block";
+        addressInput.required = true;
+    } else {
+        // Hide the fields and remove required attribute
+        addressLabel.style.display = "none";
+        addressInput.style.display = "none";
+        addressInput.required = false;
+    }
+
+    // Get the elements
+    let zipcodeLabel = document.getElementById("zipcode_label");
+    let zipcodeInput = document.getElementById("zipcode");
+
+    if (globalEventData.include_zipcode === 1) {
+        // Show the fields and mark as required
+        zipcodeLabel.style.display = "block";
+        zipcodeInput.style.display = "block";
+        zipcode.required = true;
+    } else {
+        // Hide the fields and remove required attribute
+        zipcodeLabel.style.display = "none";
+        zipcodeInput.style.display = "none";
+        zipcodeInput.required = false;
+    }
+
+    // Get the elements
+    let specialNotesLabel = document.getElementById("special_notes_label");
+    let specialNotesInput = document.getElementById("special_notes");
+
+    if (globalEventData.include_special_notes === 1) {
+        // Show the fields and mark as required
+        specialNotesLabel.style.display = "block";
+        specialNotesInput.style.display = "block";
+        specialNotesInput.required = false;
+    } else {
+        // Hide the fields and remove required attribute
+        specialNotesLabel.style.display = "none";
+        specialNotesInput.style.display = "none";
+        specialNotesInput.required = false;
+    }
+
+    // Get the elements
+    let indicateVirtualAttendanceLabel = document.getElementById("virtual_attendance_label");
+    let indicateVirtualAttendanceInput = document.getElementById("virtual_attendance");
+
+    if (['specify'].includes(globalEventData.virtual_event_rule)) {
+        // Show the fields and mark as required
+        indicateVirtualAttendanceLabel.style.display = "block";
+        indicateVirtualAttendanceInput.style.display = "block";
+        indicateVirtualAttendanceInput.required = false;
+    } else {
+        // Hide the fields and remove required attribute
+        indicateVirtualAttendanceLabel.style.display = "none";
+        indicateVirtualAttendanceInput.style.display = "none";
+        indicateVirtualAttendanceInput.required = false;
+    }
+
+    //Add a listener to make the email required if checkbox is checked
+    indicateVirtualAttendanceInput.addEventListener("change", function () {
+        if (this.checked) {
+            emailInput.setAttribute("required", "required");
+        } else {
+            emailInput.removeAttribute("required");
+        }
+    });
+
+    // Get the elements
+    let indicateVirtualAttendanceOptional = document.getElementById("virtual_attendance_optional");
+
+    if (['optional'].includes(globalEventData.virtual_event_rule)) {
+        // Show the fields and mark as required
+        indicateVirtualAttendanceOptional.style.display = "block";
+    } else {
+        // Hide the fields and remove required attribute
+        indicateVirtualAttendanceOptional.style.display = "none";
+    }
+
+    // Get the elements
+    let indicateVirtualAttendanceOnly = document.getElementById("virtual_attendance_only");
+
+    if (['only'].includes(globalEventData.virtual_event_rule)) {
+        // Show the fields and mark as required
+        indicateVirtualAttendanceOnly.style.display = "block";
+        emailInput.required = true;
+    } else {
+        // Hide the fields and remove required attribute
+        indicateVirtualAttendanceOnly.style.display = "none";
+    }
+}
 
 document.getElementById('show-occurrences').addEventListener('click', function(event) {
     event.preventDefault(); // Prevent default button behavior if necessary
@@ -171,6 +275,9 @@ function generateResultsTable(bookings) {
                 </tr>
             </thead>
             <tbody>`;
+    
+    let url = new URL(window.location.href);
+    let baseUrl = url.origin + url.pathname;
 
     bookings.forEach(booking => {
         const bookingUrl = `${baseUrl}?booking_ref=${encodeURIComponent(booking.booking_reference)}`;
@@ -466,121 +573,144 @@ document.getElementById('booking-choices').addEventListener('submit', function(e
     event.preventDefault();
 
     existingRecord = false;
-    document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
-    // First, check if the event is sold out
-    checkEventAvailability(globalEventData.post_id, globalEventData.capacity)
-        .then(isSoldOut => {
-            if (isSoldOut) {
-                // If sold out, show the sold-out message and stop further processing
-                document.getElementById('sold-out').style.display = 'block';
-                document.getElementById('event-attendance').style.display = 'none';
-            } else {
-                createFormFields(globalEventData);
-                document.getElementById('event-attendance').style.display = 'block';
-            }
-        })
-        .then(() => {
-            // Fetch event occurrences
-            return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`) 
-                .then(response => response.json())
-                .then(data => {
-                    let occurrencesContainer = document.querySelector('#occurrences-container');
-                    occurrencesContainer.innerHTML = ''; // Clear any previous content
+    //First, check if the register_by_date has been passed
+    if(new Date(globalEventData.register_by_date) < new Date() && !isEventStaff) {
+        // If sold out, show the sold-out message and stop further processing
+        document.getElementById('sold-out').style.display = 'block';
+        document.getElementById('sold-out-text').textContent = 'Sorry, Registration for this event has passed.'
+        document.getElementById('event-attendance').style.display = 'none';
+    }
+    else {
+        // Second, check if the event is sold out
+        checkEventAvailability(globalEventData.post_id, globalEventData.capacity)
+            .then(isSoldOut => {
+                if (isSoldOut && !isEventStaff) {
+                    // If sold out, show the sold-out message and stop further processing
+                    document.getElementById('sold-out').style.display = 'block';
+                    document.getElementById('event-attendance').style.display = 'none';
+                    return Promise.reject('Event is sold out'); // Stop execution
+                } else {
+                    createFormFields(globalEventData);
+                    document.getElementById('event-attendance').style.display = 'block';
+                }
+            })
+            .then(() => {
+                document.body.style.cursor = 'wait'; // Set cursor before fetch starts
+                // Fetch event occurrences
+                return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-occurrences.php?post_id=${globalEventData.post_id}&_wpnonce=${leanwiVars.ajax_nonce}`) 
+                    .then(response => response.json())
+                    .then(data => {
+                        let occurrencesContainer = document.querySelector('#occurrences-container');
+                        occurrencesContainer.innerHTML = ''; // Clear any previous content
 
-                    data.event_occurrences.forEach(occurrence => {
-                        let startDate = new Date(occurrence.start_date);
-                        let endDate = new Date(occurrence.end_date);
+                        data.event_occurrences.forEach(occurrence => {
+                            let startDate = new Date(occurrence.start_date);
+                            let endDate = new Date(occurrence.end_date);
 
-                        // Format the date and time
-                        let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                        let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                            // Format the date and time
+                            let formattedStartDate = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                            let formattedEndDate = `${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-                        // Calculate spots available. If it's overbooked (negative), show 0 spots available to general users
-                        let spotsAvailable = globalEventData.capacity - occurrence.total_participants;
-                        if (!isEventStaff && spotsAvailable < 0) {
-                            spotsAvailable = 0;
-                        }
+                            // Calculate spots available. If it's overbooked (negative), show 0 spots available to general users
+                            let spotsAvailable = globalEventData.capacity - occurrence.total_participants;
+                            if (!isEventStaff && spotsAvailable < 0) {
+                                spotsAvailable = 0;
+                            }
 
-                        // Create a display element for each occurrence
-                        let occurrenceElement = document.createElement('div');
-                        occurrenceElement.classList.add('occurrence-button');
+                            // Create a display element for each occurrence
+                            let occurrenceElement = document.createElement('div');
+                            occurrenceElement.classList.add('occurrence-button');
 
-                        // Add a class if no spots are available
-                        if (globalEventData.capacity > 0 && spotsAvailable < 1) {
-                            occurrenceElement.classList.add('no-spots');
-                        }
+                            // Add a class if no spots are available
+                            if (globalEventData.capacity > 0 && spotsAvailable < 1) {
+                                occurrenceElement.classList.add('no-spots');
+                            }
 
-                        occurrenceElement.innerHTML = `
-                            <input type="checkbox" class="occurrence-checkbox" value="${occurrence.occurrence_id}">
-                            <div class="occurrence-info">
-                                ${formattedStartDate} to ${formattedEndDate}
-                            </div> 
-                            <div class="participants">
-                                (${globalEventData.capacity > 0 ? spotsAvailable + ' Spots Available' : 'Unlimited Spots Available'})
-                            </div>
-                        `;
-
-                        occurrencesContainer.appendChild(occurrenceElement);
-                    });
-
-                    // Apply participation rule logic
-                    applyParticipationRule(globalEventData.participation_rule);
-                })
-                .catch(error => {
-                    console.error('Error fetching occurrences:', error);
-                });
-        })
-        .then(() => {
-            // Fetch event costs
-            return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-costs.php?event_data_id=${globalEventData.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
-                .then(response => response.json())
-                .then(data => {
-                    let costsContainer = document.querySelector('#costs-container');
-                    costsContainer.innerHTML = ''; // Clear any previous content
-
-                    // Loop through each cost and create the display elements
-                    data.event_costs.forEach(cost => {
-                        if (cost.historic == 0) { // Only show costs that are not historic
-                            // Create a container for each cost item
-                            let costElement = document.createElement('div');
-                            costElement.classList.add('cost-item'); // Add a class for styling
-
-                            // Create the content of each cost item
-                            costElement.innerHTML = `
-                                <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
-                                <div class="cost-amount">$${cost.cost_amount}</div>
-                                <label for="attending-${cost.cost_id}">Number Attending:</label>
-                                <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="0" class="attending-input">
+                            occurrenceElement.innerHTML = `
+                                <input type="checkbox" class="occurrence-checkbox" value="${occurrence.occurrence_id}">
+                                <div class="occurrence-info">
+                                    ${formattedStartDate} to ${formattedEndDate}
+                                </div> 
+                                <div class="participants">
+                                    (${globalEventData.capacity > 0 ? spotsAvailable + ' Spots Available' : 'Unlimited Spots Available'})
+                                </div>
                             `;
 
-                            // Append the cost element to the container
-                            costsContainer.appendChild(costElement);
-                        }
+                            occurrencesContainer.appendChild(occurrenceElement);
+                        });
+
+                        // Apply participation rule logic
+                        applyParticipationRule(globalEventData.participation_rule);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching occurrences:', error);
                     });
+            })
+            .then(() => {
+                // Fetch event costs
+                return fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-costs.php?event_data_id=${globalEventData.event_data_id}&_wpnonce=${leanwiVars.ajax_nonce}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let costsContainer = document.querySelector('#costs-container');
+                        costsContainer.innerHTML = ''; // Clear any previous content
 
-                    // Create a div to display the total cost
-                    totalCostDisplay = document.createElement('div');
-                    totalCostDisplay.id = 'total-cost-display';
-                    totalCostDisplay.textContent = 'Your total cost is $0.00 for 0 Events';  // Initial message
-                    costsContainer.appendChild(totalCostDisplay);
-                })
-                .catch(error => {
-                    console.error('Error fetching costs:', error);
-                });
-        })
-        .then(() => {
-            displayDisclaimers(globalEventData, globalEventData);
-        })
-        .catch(error => console.error('Error in booking process:', error))
-        .finally(() => {
-            document.body.style.cursor = 'default'; // Reset cursor after fetch completes
-        });
+                        // Loop through each cost and create the display elements
+                        data.event_costs.forEach(cost => {
+                            if (cost.historic == 0) { // Only show costs that are not historic
+                                // Create a container for each cost item
+                                let costElement = document.createElement('div');
+                                costElement.classList.add('cost-item'); // Add a class for styling
 
-    document.getElementById('event-attendance').style.display = 'block';
-    document.getElementById('existing-booking-container').style.display = 'none';
+                                // Create the main content of each cost item
+                                let costContent = `
+                                    <div class="cost-details">
+                                        <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
+                                        <div class="cost-amount">$${cost.cost_amount}</div>
+                                        <label for="attending-${cost.cost_id}">Number Attending:</label>
+                                        <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="0" class="attending-input">
+                                    </div>
+                                `;
 
-    addListeners();
+                                // If include_extra_info is set to 1, add a new line for extra info
+                                if (cost.include_extra_info === 1) {
+                                    costContent += `
+                                        <div class="extra-info">
+                                            <label for="extra-info-${cost.cost_id}">${cost.extra_info_label || 'Additional Info:'}</label>
+                                            <textarea id="extra-info-${cost.cost_id}" name="extra-info-${cost.cost_id}" rows="3" class="extra-info-input"></textarea>
+                                        </div>
+                                    `;
+                                }
+
+                                costElement.innerHTML = costContent;
+                                // Append the cost element to the container
+                                costsContainer.appendChild(costElement);
+                            }
+                        });
+
+                        // Create a div to display the total cost
+                        totalCostDisplay = document.createElement('div');
+                        totalCostDisplay.id = 'total-cost-display';
+                        totalCostDisplay.textContent = 'Your total cost is $0.00 for 0 Events';  // Initial message
+                        costsContainer.appendChild(totalCostDisplay);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching costs:', error);
+                    });
+            })
+            .then(() => {
+                displayDisclaimers(globalEventData, globalEventData);
+            })
+            .catch(error => console.error('Error in booking process:', error))
+            .finally(() => {
+                document.body.style.cursor = 'default'; // Reset cursor after fetch completes
+            });
+
+        document.getElementById('event-attendance').style.display = 'block';
+        document.getElementById('existing-booking-container').style.display = 'none';
+
+        addListeners();
+    }
 });
 
 function addListeners() {
@@ -672,7 +802,16 @@ function submitBooking(formData) {
         const costId = item.querySelector('.cost-name').dataset.costId; // Retrieve cost_id from data attribute
         const numberOfParticipants = parseInt(item.querySelector('.attending-input').value, 10) || 0;
         totalParticipants += numberOfParticipants;
-        costs.push({ cost_id: costId, number_of_participants: numberOfParticipants });
+
+        // Find the extra-info textarea if it exists
+        const extraInfoInput = item.querySelector('.extra-info-input');
+        const extraInfo = extraInfoInput ? extraInfoInput.value.trim() : '';
+
+        costs.push({ 
+            cost_id: costId, 
+            number_of_participants: numberOfParticipants, 
+            extra_info: extraInfo 
+        });
     });
 
     formData.append('costs', JSON.stringify(costs));  // Append the costs data as a JSON string
@@ -773,7 +912,16 @@ function submitWaitList(formData) {
         const costId = item.querySelector('.cost-name').dataset.costId; // Retrieve cost_id from data attribute
         const numberOfParticipants = parseInt(item.querySelector('.attending-input').value, 10) || 0;
         totalParticipants += numberOfParticipants;
-        costs.push({ cost_id: costId, number_of_participants: numberOfParticipants });
+
+        // Find the extra-info textarea if it exists
+        const extraInfoInput = item.querySelector('.extra-info-input');
+        const extraInfo = extraInfoInput ? extraInfoInput.value.trim() : '';
+
+        costs.push({ 
+            cost_id: costId, 
+            number_of_participants: numberOfParticipants, 
+            extra_info: extraInfo 
+        });
     });
 
     formData.append('costs', JSON.stringify(costs));  // Append the costs data as a JSON string
@@ -846,6 +994,7 @@ function showExistingBookingContainer() {
 
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
 
+    console.log("globalEventdata: ", globalEventData);
     createFormFields(globalEventData);
 }
 
@@ -997,7 +1146,11 @@ function populateBookingFormFields(booking) {
         document.getElementById('name').value = booking.name || '';
         document.getElementById('email').value = booking.email || '';
         document.getElementById('phone').value = booking.phone || '';
+        document.getElementById('special_notes').value = booking.special_notes || '';
+        document.getElementById('physical_address').value = booking.physical_address || '';
+        document.getElementById('zipcode').value = booking.zipcode || '';
         document.getElementById('booking_reference').value = booking.booking_reference || '';
+        document.getElementById('virtual_attendance').checked = booking.attending_virtually == 1;
     }
 }
 
@@ -1013,7 +1166,10 @@ function displayCosts(booking, costs) { // `costs` contains previously booked co
         costsContainer.innerHTML = ''; // Clear any previous content
 
         const bookedCosts = costs.reduce((map, cost) => {
-            map[cost.cost_id] = cost.number_of_participants;
+            map[cost.cost_id] = { 
+                number_of_participants: cost.number_of_participants, 
+                extra_info: cost.extra_info || "" 
+            };
             return map;
         }, {});
 
@@ -1025,18 +1181,31 @@ function displayCosts(booking, costs) { // `costs` contains previously booked co
                 costElement.classList.add('cost-item'); // Add a class for styling
 
                 // Determine the initial value for "Number Attending"
-                let attendingValue = bookedCosts[cost.cost_id] || 0; // Use booked number or default to 0
+                let attendingValue = bookedCosts[cost.cost_id]?.number_of_participants || 0;
+                let extraInfoValue = bookedCosts[cost.cost_id]?.extra_info || "";
 
                 // Create the content of each cost item
-                costElement.innerHTML = `
-                    <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
-                    <div class="cost-amount">$${cost.cost_amount}</div>
-                    <label for="attending-${cost.cost_id}">Number Attending:</label>
-                    <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="${attendingValue}" class="attending-input">
+                let costContent = `
+                    <div class="cost-details">
+                        <div class="cost-name" data-cost-id="${cost.cost_id}">${cost.cost_name}</div>
+                        <div class="cost-amount">$${cost.cost_amount}</div>
+                        <label for="attending-${cost.cost_id}">Number Attending:</label>
+                        <input type="number" id="attending-${cost.cost_id}" name="attending-${cost.cost_id}" min="0" value="${attendingValue}" class="attending-input">
+                    </div>
                 `;
 
+                // If include_extra_info is set to 1, add a new line for extra info
+                if (cost.include_extra_info === 1) {
+                    costContent += `
+                        <div class="extra-info">
+                            <label for="extra-info-${cost.cost_id}">${cost.extra_info_label || 'Additional Info:'}</label>
+                            <textarea id="extra-info-${cost.cost_id}" name="extra-info-${cost.cost_id}" rows="3" class="extra-info-input">${extraInfoValue}</textarea>
+                        </div>
+                    `;
+                }
+
                 if(cost.historic === 1 && attendingValue > 0){
-                    costElement.innerHTML += `<div class="user-message">
+                    costContent += `<div class="user-message">
                                                 (historic cost - please remove from attendance)
                                             </div>
                                             `;
@@ -1044,12 +1213,18 @@ function displayCosts(booking, costs) { // `costs` contains previously booked co
                     usedHistoricCosts.push(cost);
 
                 }
-                //Disable the input box of this is an historic booking
+
+                costElement.innerHTML = costContent;
+
+                //Disable the input box if this is an historic booking
                 const inputBox = costElement.querySelector(`#attending-${cost.cost_id}`);
-                inputBox.disabled = booking.historic == 1;
+                if (inputBox) {
+                    inputBox.disabled = booking.historic === 1;
+                }
 
                 // Append the cost element to the container
                 costsContainer.appendChild(costElement);
+
             } 
         });
 

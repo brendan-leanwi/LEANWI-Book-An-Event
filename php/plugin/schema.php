@@ -77,6 +77,7 @@ function leanwi_event_create_tables() {
         special_notes VARCHAR(255),
         physical_address VARCHAR(255),
         zipcode VARCHAR(10),
+        attending_virtually TINYINT(1) DEFAULT 0,
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
@@ -124,6 +125,10 @@ function leanwi_event_create_tables() {
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
         total_participants INT NOT NULL,
+        special_notes VARCHAR(255),
+        physical_address VARCHAR(255),
+        zipcode VARCHAR(10),
+        attending_virtually TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
 
@@ -132,6 +137,7 @@ function leanwi_event_create_tables() {
         booking_id INT NOT NULL,
         cost_id INT NOT NULL,
         number_of_participants INT NOT NULL,
+        extra_info VARCHAR(255),
         payment_received TINYINT(1) DEFAULT 0,
         FOREIGN KEY (booking_id) REFERENCES {$wpdb->prefix}leanwi_event_waitlist_booking(booking_id) ON DELETE CASCADE,
         FOREIGN KEY (cost_id) REFERENCES {$wpdb->prefix}leanwi_event_cost(cost_id) ON DELETE CASCADE

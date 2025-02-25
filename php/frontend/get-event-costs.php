@@ -20,7 +20,7 @@ if ($event_data_id > 0) {
 
     // Fetch costs associated with the event_data_id
     $sql = $wpdb->prepare("
-        SELECT cost_id, cost_name, cost_amount, historic
+        SELECT *
         FROM $costs_table
         WHERE event_data_id = %d
         ORDER BY cost_name
@@ -36,6 +36,8 @@ if ($event_data_id > 0) {
                 'cost_id' => intval($result['cost_id']),
                 'cost_name' => esc_html($result['cost_name']), 
                 'cost_amount' => is_numeric($result['cost_amount']) ? number_format((float)$result['cost_amount'], 2, '.', '') : '0.00',
+                'include_extra_info' => intval($result['include_extra_info']),
+                'extra_info_label' => esc_html($result['extra_info_label']), 
                 'historic' => intval($result['historic']),
             ];
         }, $costs);
