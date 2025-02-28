@@ -277,14 +277,14 @@ function leanwi_events_page() {
     echo '</thead>';
     echo '<tbody>';
 
-    // Fetch venues
+    // Fetch events
     $events = fetch_events();
     if (isset($events['error'])) {
         echo '<tr><td colspan="6">' . esc_html($events['error']) . '</td></tr>';
     } elseif (empty($events['events'])) {
         echo '<tr><td colspan="7">No Booking Events have been created yet.</td></tr>';
     } else {
-        // Display each venue in a row
+        // Display each event in a row
         foreach ($events['events'] as $event) {
             echo '<tr>';
            echo '<td>' . esc_html($event['title']) . '</td>';
@@ -1828,20 +1828,19 @@ function leanwi_event_edit_disclaimer_page() {
 
 // Function to display the reporting functionality
 function leanwi_event_reports_page() {
-    // Fetch venue data from the database
-    // Fetch venues
-    $venues_response = fetch_venues();
-    if (isset($venues_response['error'])) {
-        echo '<tr><td colspan="6">' . esc_html($venues_response['error']) . '</td></tr>';
+    //Fetch Events
+    $events_response = fetch_events();
+    if (isset($events_response['error'])) {
+        echo '<tr><td colspan="6">' . esc_html($events_response['error']) . '</td></tr>';
         return; // Exit early if there's an error
     }
 
-    // Ensure venues is set and is an array
-    $venues = isset($venues_response['venues']) ? $venues_response['venues'] : [];
+    // Ensure events is set and is an array
+    $events = isset($events_response['events']) ? $events_response['events'] : [];
 
     // Define the directory path for reports
     $upload_dir = wp_upload_dir();
-    $reports_dir = $upload_dir['basedir'] . '/leanwi_reports/';
+    $reports_dir = $upload_dir['basedir'] . '/leanwi_event_reports/';
     
     // Get report files
     $report_files = glob($reports_dir . '*.csv');
@@ -1850,8 +1849,9 @@ function leanwi_event_reports_page() {
     ?>
     <div class="wrap">
         <h1>Reports</h1>
-        <form id="leanwi-report-form" method="post" action="<?php echo plugins_url('LEANWI-Book-An-event/php/plugin/generate-report.php'); ?>">
-            <?php wp_nonce_field('leanwi_generate_report', 'leanwi_generate_report_nonce'); ?>
+        <form id="leanwi-event-attendance-report-form" method="post" action="<?php echo plugins_url('LEANWI-Book-An-Event/php/plugin/generate-attendance-report.php'); ?>">
+            <h2>Event Attendance Reporting</h2>
+            <?php wp_nonce_field('leanwi_event_generate_report', 'leanwi_event_generate_report_nonce'); ?>
             <div class="form-row">
                 <div class="form-group">
                     <label for="start_date">Start Date:</label>
@@ -1864,12 +1864,12 @@ function leanwi_event_reports_page() {
             </div>
             <div class="form-row">
                 <div class="form-group">
-                <label for="venue_info">Select Venue:</label>
-                    <select id="venue_info" name="venue_info">
-                        <option value="">-- All Venues --</option>
-                        <?php foreach ($venues as $venue): ?>
-                            <option value="<?php echo esc_attr($venue['venue_id']) . '|' . esc_attr($venue['name']); ?>">
-                                <?php echo esc_html($venue['name']); ?>
+                <label for="event_info">Select Event:</label>
+                    <select id="event_info" name="event_info">
+                        <option value="">-- All Events --</option>
+                        <?php foreach ($events as $event): ?>
+                            <option value="<?php echo esc_attr($event['event_data_id']) . '|' . esc_attr($event['title']); ?>">
+                                <?php echo esc_html($event['title']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -1884,34 +1884,73 @@ function leanwi_event_reports_page() {
                 </div>
             </div>
             <div class="form-row">
-                <input type="submit" value="Generate Report" class="button button-primary">
+                <input type="submit" value="Generate Attendance Report" class="button button-primary">
             </div>
         </form>
+        <hr>
+
+        <form id="leanwi-event-payment-report-form" method="post" action="<?php echo plugins_url('LEANWI-Book-An-Event/php/plugin/generate-payment-report.php'); ?>">
+            <h2>Payment Reporting</h2>
+            <?php wp_nonce_field('leanwi_event_generate_report', 'leanwi_event_generate_report_nonce'); ?>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="start_date">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="end_date">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                <label for="event_info">Select Event:</label>
+                    <select id="event_info" name="event_info">
+                        <option value="">-- All Events --</option>
+                        <?php foreach ($events as $event): ?>
+                            <option value="<?php echo esc_attr($event['event_data_id']) . '|' . esc_attr($event['title']); ?>">
+                                <?php echo esc_html($event['title']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="include_paid">Include Paid:</label>
+                    <input type="checkbox" id="include_paid" name="include_paid" value="yes">
+                </div>
+                <div class="form-group">
+                    <label for="include_unpaid">Include Unpaid:</label>
+                    <input type="checkbox" id="include_unpaid" name="include_unpaid" value="yes">
+                </div>
+            </div>
+            <div class="form-row">
+                <input type="submit" value="Generate Payment Report" class="button button-primary">
+            </div>
+        </form>
+        <hr>
 
         <!-- Handle form submission so we can update the number of reports we have on the server after the report has been created -->
         <script type="text/javascript">
-            document.getElementById("leanwi-report-form").onsubmit = function(event) {
+            function handleFormSubmit(event) {
+                
                 const form = this;
-                const originalAction = form.action; // Save the original action
-                
-                // Prevent the default form submission
-                event.preventDefault(); 
-                
-                // Create a FormData object from the form
                 const formData = new FormData(form);
-                formData.append('_ajax_nonce', '<?php echo wp_create_nonce('leanwi_generate_report_nonce'); ?>');
+                formData.append('_ajax_nonce', '<?php echo wp_create_nonce('leanwi_event_generate_report_nonce'); ?>');
+
+                // Disable the submit button to prevent double submission
+                const submitButton = form.querySelector("input[type='submit']");
+                submitButton.disabled = true;
 
                 // Perform AJAX request to generate the report
-                fetch(originalAction, {
+                fetch(form.action, {
                     method: "POST",
                     body: formData,
                 })
                 .then(response => {
                     if (!response.ok) throw new Error("Failed to generate report.");
-                    return response.text(); // Process as plain text to handle redirection
+                    return response.text();
                 })
-                .then(data => {
-                    // Now update the report count via AJAX
+                .then(() => {
                     return fetch("<?php echo admin_url('admin-ajax.php'); ?>?action=leanwi_event_get_report_count", {
                         method: "GET",
                         credentials: "same-origin",
@@ -1924,19 +1963,23 @@ function leanwi_event_reports_page() {
                             `You currently have ${data.data.report_count} reports sitting on the server.`;
                     }
                 })
-                .catch(error => alert(error.message));
-                
-                // Submit the form to trigger the download
-                form.submit();
+                .catch(error => alert(error.message))
+                .finally(() => {
+                    submitButton.disabled = false; // Re-enable the button after completion
+                });
             };
+
+            // Attach the event listener to both forms
+            document.getElementById("leanwi-event-attendance-report-form").addEventListener("submit", handleFormSubmit);
+            document.getElementById("leanwi-event-payment-report-form").addEventListener("submit", handleFormSubmit);
+
         </script>
 
-        <hr>
         <div class="purge-reports-section">
             <p>You currently have <?php echo esc_html($report_count); ?> reports sitting on the server.</p>
             <form method="post" action="" onsubmit="return confirmPurge();">
-                <?php wp_nonce_field('event_', 'event__nonce'); ?>
-                <input type="hidden" name="purge_reports" value="1">
+                <?php wp_nonce_field('leanwi_event_purge_reports', 'leanwi_event_purge_reports_nonce'); ?>
+                <input type="hidden" name="purge_event_reports" value="1">
                 <input type="submit" value="Purge Old Reports" class="button button-secondary">
             </form>
         </div>
@@ -1961,7 +2004,7 @@ function leanwi_event_reports_page() {
             display: block; /* Make label take full width */
             margin-bottom: 5px; /* Space between label and input */
         }
-        #leanwi-report-form input[type="date"] {
+        #leanwi-event-attendance-report-form input[type="date"] {
             padding: 5px; /* Padding inside the date input */
             width: 150px; /* Set a fixed width for the date inputs */
         }
@@ -1970,7 +2013,7 @@ function leanwi_event_reports_page() {
             margin-left: 5px; /* Space between checkbox and label */
         }
         /* Style the dropdown */
-        #venue_id {
+        #event_info {
             padding: 5px; /* Padding inside the dropdown */
             width: 150px; /* Set a fixed width for the dropdown */
         }
@@ -1983,31 +2026,33 @@ function leanwi_event_reports_page() {
 
 // Handle report purge action
 function leanwi_event_purge_reports() {
-    if (isset($_POST['purge_reports']) && $_POST['purge_reports'] == '1') {
-        // Verify the nonce
-        if (!isset($_POST['event__nonce']) || !wp_verify_nonce($_POST['event__nonce'], 'event_')) {
-            wp_die('Nonce verification failed. Please reload the page and try again.');
+    if (!isset($_POST['purge_event_reports']) || $_POST['purge_event_reports'] != '1') {
+        return;
+    }
+    // Verify the nonce
+    if (!isset($_POST['leanwi_event_purge_reports_nonce']) || !wp_verify_nonce($_POST['leanwi_event_purge_reports_nonce'], 'leanwi_event_purge_reports')) {
+        wp_die('Nonce verification failed. Please reload the page and try again.');
+    }
+    // Define the directory path for reports
+    $upload_dir = wp_upload_dir();
+    $reports_dir = $upload_dir['basedir'] . '/leanwi_event_reports/';
+    
+    // Get all report files in the directory
+    $report_files = glob($reports_dir . '*.csv');
+    
+    // Delete each file
+    foreach ($report_files as $file) {
+        if (is_file($file)) {
+            unlink($file);
         }
-        // Define the directory path for reports
-        $upload_dir = wp_upload_dir();
-        $reports_dir = $upload_dir['basedir'] . '/leanwi_reports/';
-        
-        // Get all report files in the directory
-        $report_files = glob($reports_dir . '*.csv');
-        
-        // Delete each file
-        foreach ($report_files as $file) {
-            if (is_file($file)) {
-                unlink($file);
-            }
-        }
-        
-        // Redirect back to the reports page to refresh the count
-        wp_redirect(admin_url('admin.php?page=leanwi-book-an-event-reports'));
-        exit;
-    }   
-}
+    }
+    
+    // Redirect back to the reports page to refresh the count
+    wp_safe_redirect(admin_url('admin.php?page=leanwi-book-an-event-reports'));
+    exit;
+}   
 add_action('admin_init', __NAMESPACE__ . '\\leanwi_event_purge_reports');
+//add_action('admin_post_leanwi_purge_reports', 'leanwi_event_purge_reports');
 
 // AJAX handler for fetching updated report count
 function leanwi_event_get_report_count() {
@@ -2018,7 +2063,7 @@ function leanwi_event_get_report_count() {
 
     // Get the directory path for reports
     $upload_dir = wp_upload_dir();
-    $reports_dir = $upload_dir['basedir'] . '/leanwi_reports/';
+    $reports_dir = $upload_dir['basedir'] . '/leanwi_event_reports/';
     
     // Count the reports
     $report_files = glob($reports_dir . '*.csv');
@@ -2057,21 +2102,19 @@ function leanwi_event_settings_page() {
 
 // Function to register settings
 function leanwi_event_register_settings() {
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_minutes_interval');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_booking_months');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_show_zero_cost');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_show_categories');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_show_audiences');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_send_admin_booking_email');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_admin_email_address');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_highlighted_button_border_color');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_highlighted_button_bg_color');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_highlighted_button_text_color');
+    
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_send_admin_booking_email');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_admin_email_address');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_email_from_name');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_feedback_form_link');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_highlighted_button_border_color');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_highlighted_button_bg_color');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_highlighted_button_text_color');
 
     // Register settings for reCAPTCHA enable, site key, and secret key
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_enable_recaptcha');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_recaptcha_site_key');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_recaptcha_secret_key');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_enable_recaptcha');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_recaptcha_site_key');
+    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_recaptcha_secret_key');
 
     // Add a section to the settings page
     add_settings_section(
@@ -2080,184 +2123,106 @@ function leanwi_event_register_settings() {
         null,                           // Callback function (optional)
         'leanwi-book-an-event-settings'   // Page slug where the section will be displayed
     );
-    
-    // Add Minutes Interval dropdown
-    add_settings_field(
-        'leanwi_minutes_interval',      // Field ID
-        'Minutes Interval',             // Label for the field
-        __NAMESPACE__ . '\\leanwi_minutes_interval_field',// Function to display the dropdown
-        'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
-    );
 
-    // Add Booking Months in advance input
+    // Add whether admin should be sent a copy of the booking email field
     add_settings_field(
-        'leanwi_booking_months',  // Field ID
-        'Booking Months in Advance',         // Label for the field
-        __NAMESPACE__ . '\\leanwi_booking_months_field', // Function to display the input
-        'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
-    );
-
-    // Add 'Show Zero Cost to Users?' setting field
-    add_settings_field(
-        'leanwi_show_zero_cost',       // Field ID
-        'Show Cost to Users if Zero?', // Label for the field
-        __NAMESPACE__ . '\\leanwi_show_zero_cost_field', // Function to display the dropdown
-        'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
-    );
-
-    // Add 'Show Categories to Users' setting field
-    add_settings_field(
-        'leanwi_show_categories',       // Field ID
-        'Show Categories to Users?',     // Label for the field
-        __NAMESPACE__ . '\\leanwi_show_categories_field', // Function to display the dropdown
-        'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
-    );
-
-    // Add 'Show Audiences to Users' setting field
-    add_settings_field(
-        'leanwi_show_audiences',        // Field ID
-        'Show Audiences to Users?',      // Label for the field
-        __NAMESPACE__ . '\\leanwi_show_audiences_field',  // Function to display the dropdown
-        'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
-    );
-
-    // Add wheter admin should be sent a copy of the booking email field
-    add_settings_field(
-        'leanwi_send_admin_booking_email',       // Field ID
+        'leanwi_event_send_admin_booking_email',       // Field ID
         'Send Admin a Copy of the Booking Email?',     // Label for the field
-        __NAMESPACE__ . '\\leanwi_send_admin_booking_email_field', // Function to display the dropdown
+        __NAMESPACE__ . '\\leanwi_event_send_admin_booking_email_field', // Function to display the dropdown
         'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
+        'leanwi_event_main_section'           // Section ID
     );
 
     // Add Admin email address field
     add_settings_field(
-        'leanwi_admin_email_address',  // Field ID
+        'leanwi_event_admin_email_address',  // Field ID
         'Email Address for Booking Emails',         // Label for the field
-        __NAMESPACE__ . '\\leanwi_admin_email_address_field', // Function to display the input
+        __NAMESPACE__ . '\\leanwi_event_admin_email_address_field', // Function to display the input
         'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
+        'leanwi_event_main_section'           // Section ID
+    );
+
+    // Add email from name field
+    add_settings_field(
+        'leanwi_event_email_from_name',  // Field ID
+        'Email From Name',         // Label for the field
+        __NAMESPACE__ . '\\leanwi_event_email_from_name_field', // Function to display the input
+        'leanwi-book-an-event-settings',  // Page slug
+        'leanwi_event_main_section'           // Section ID
+    );
+
+    // Add Admin email address field
+    add_settings_field(
+        'leanwi_event_feedback_form_link',  // Field ID
+        'URL Link to Feedback Form',         // Label for the field
+        __NAMESPACE__ . '\\leanwi_event_feedback_form_link_field', // Function to display the input
+        'leanwi-book-an-event-settings',  // Page slug
+        'leanwi_event_main_section'           // Section ID
     );
 
     // Add border color for highlighted buttons field
     add_settings_field(
-        'leanwi_highlighted_button_border_color',  // Field ID
+        'leanwi_event_highlighted_button_border_color',  // Field ID
         'Border color for highlighted buttons',         // Label for the field
-        __NAMESPACE__ . '\\leanwi_highlighted_button_border_color_field', // Function to display the input
+        __NAMESPACE__ . '\\leanwi_event_highlighted_button_border_color_field', // Function to display the input
         'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
+        'leanwi_event_main_section'           // Section ID
     );
 
     // Add bg color for highlighted buttons field
     add_settings_field(
-        'leanwi_highlighted_button_bg_color',  // Field ID
+        'leanwi_event_highlighted_button_bg_color',  // Field ID
         'Background color for highlighted buttons',         // Label for the field
-        __NAMESPACE__ . '\\leanwi_highlighted_button_bg_color_field', // Function to display the input
+        __NAMESPACE__ . '\\leanwi_event_highlighted_button_bg_color_field', // Function to display the input
         'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
+        'leanwi_event_main_section'           // Section ID
     );
 
     // Add text color for highlighted buttons field
     add_settings_field(
-        'leanwi_highlighted_button_text_color',  // Field ID
+        'leanwi_event_highlighted_button_text_color',  // Field ID
         'Text color for highlighted buttons',         // Label for the field
-        __NAMESPACE__ . '\\leanwi_highlighted_button_text_color_field', // Function to display the input
+        __NAMESPACE__ . '\\leanwi_event_highlighted_button_text_color_field', // Function to display the input
         'leanwi-book-an-event-settings',  // Page slug
-        'leanwi_main_section'           // Section ID
+        'leanwi_event_main_section'           // Section ID
     );
 
     // Add field to enable/disable reCAPTCHA
     add_settings_field(
-        'leanwi_enable_recaptcha',
+        'leanwi_event_enable_recaptcha',
         'Enable reCAPTCHA',
-        __NAMESPACE__ . '\\leanwi_enable_recaptcha_field',
+        __NAMESPACE__ . '\\leanwi_event_enable_recaptcha_field',
         'leanwi-book-an-event-settings',
-        'leanwi_main_section'
+        'leanwi_event_main_section'
     );
 
     // Add field for reCAPTCHA site key
     add_settings_field(
-        'leanwi_recaptcha_site_key',
+        'leanwi_event_recaptcha_site_key',
         'reCAPTCHA Site Key',
-        __NAMESPACE__ . '\\leanwi_recaptcha_site_key_field',
+        __NAMESPACE__ . '\\leanwi_event_recaptcha_site_key_field',
         'leanwi-book-an-event-settings',
-        'leanwi_main_section'
+        'leanwi_event_main_section'
     );
 
     // Add field for reCAPTCHA secret key
     add_settings_field(
-        'leanwi_recaptcha_secret_key',
+        'leanwi_event_recaptcha_secret_key',
         'reCAPTCHA Secret Key',
-        __NAMESPACE__ . '\\leanwi_recaptcha_secret_key_field',
+        __NAMESPACE__ . '\\leanwi_event_recaptcha_secret_key_field',
         'leanwi-book-an-event-settings',
-        'leanwi_main_section'
+        'leanwi_event_main_section'
     );
 }
 
 // Hook the settings registration function
 add_action('admin_init', __NAMESPACE__ . '\\leanwi_event_register_settings');
 
-// Function to display the Minutes Interval dropdown
-function leanwi_minutes_interval_field() {
-    $value = get_option('leanwi_minutes_interval', ''); // Get saved value or default to an empty string
-    ?>
-    <select id="leanwi_minutes_interval" name="leanwi_minutes_interval">
-        <option value="15" <?php selected($value, '15'); ?>>15</option>
-        <option value="30" <?php selected($value, '30'); ?>>30</option>
-        <option value="60" <?php selected($value, '60'); ?>>60</option>
-    </select>
-    <?php
-}
-
-// Function to display the Booking Months in advance input
-function leanwi_booking_months_field() {
-    $value = get_option('leanwi_booking_months', ''); // Get saved value or default to an empty string
-    echo '<input type="number" id="leanwi_booking_months" name="leanwi_booking_months" value="' . esc_attr($value) . '" />';
-}
-
-// Function to display 'Show Zero Cost to Users' dropdown
-function leanwi_show_zero_cost_field() {
-    $value = get_option('leanwi_show_zero_cost', 'no'); // Default to 'no' if no value is set
-    ?>
-    <select id="leanwi_show_zero_cost" name="leanwi_show_zero_cost">
-        <option value="yes" <?php selected($value, 'yes'); ?>>Yes</option>
-        <option value="no" <?php selected($value, 'no'); ?>>No</option>
-    </select>
-    <?php
-}
-
-// Function to display 'Show Categories to Users' dropdown
-function leanwi_show_categories_field() {
-    $value = get_option('leanwi_show_categories', 'no'); // Default to 'no' if no value is set
-    ?>
-    <select id="leanwi_show_categories" name="leanwi_show_categories">
-        <option value="yes" <?php selected($value, 'yes'); ?>>Yes</option>
-        <option value="no" <?php selected($value, 'no'); ?>>No</option>
-    </select>
-    <?php
-}
-
-// Function to display 'Show Audiences to Users' dropdown
-function leanwi_show_audiences_field() {
-    $value = get_option('leanwi_show_audiences', 'no'); // Default to 'no' if no value is set
-    ?>
-    <select id="leanwi_show_audiences" name="leanwi_show_audiences">
-        <option value="yes" <?php selected($value, 'yes'); ?>>Yes</option>
-        <option value="no" <?php selected($value, 'no'); ?>>No</option>
-    </select>
-    <?php
-}
-
 // Function to display 'Send admin a booking email' dropdown
-function leanwi_send_admin_booking_email_field() {
-    $value = get_option('leanwi_send_admin_booking_email', 'no'); // Default to 'no' if no value is set
+function leanwi_event_send_admin_booking_email_field() {
+    $value = get_option('leanwi_event_send_admin_booking_email', 'no'); // Default to 'no' if no value is set
     ?>
-    <select id="leanwi_send_admin_booking_email" name="leanwi_send_admin_booking_email">
+    <select id="leanwi_event_send_admin_booking_email" name="leanwi_event_send_admin_booking_email">
         <option value="yes" <?php selected($value, 'yes'); ?>>Yes</option>
         <option value="no" <?php selected($value, 'no'); ?>>No</option>
     </select>
@@ -2265,35 +2230,47 @@ function leanwi_send_admin_booking_email_field() {
 }
 
 // Function to display the admin email address input
-function leanwi_admin_email_address_field() {
-    $value = get_option('leanwi_admin_email_address', ''); // Get saved value or default to an empty string
-    echo '<input type="email" id="leanwi_admin_email_address" name="leanwi_admin_email_address" value="' . esc_attr($value) . '"  style="width: 75%;"/>';
+function leanwi_event_admin_email_address_field() {
+    $value = get_option('leanwi_event_admin_email_address', ''); // Get saved value or default to an empty string
+    echo '<input type="email" id="leanwi_event_admin_email_address" name="leanwi_event_admin_email_address" value="' . esc_attr($value) . '"  style="width: 75%;"/>';
+}
+
+// Function to display the email from name input
+function leanwi_event_email_from_name_field() {
+    $value = get_option('leanwi_event_email_from_name', 'Library Events Team'); // Get saved value or default to an empty string
+    echo '<input type="text" id="leanwi_event_email_from_name" name="leanwi_event_email_from_name" value="' . esc_attr($value) . '"  style="width: 75%;"/>';
+}
+
+// Function to display the admin email address input
+function leanwi_event_feedback_form_link_field() {
+    $value = get_option('leanwi_event_feedback_form_link', ''); // Get saved value or default to an empty string
+    echo '<input type="url" id="leanwi_event_feedback_form_link" name="leanwi_event_feedback_form_link" value="' . esc_attr($value) . '"  style="width: 75%;"/>';
 }
 
 // Function to display the highlighted border color input
-function leanwi_highlighted_button_border_color_field() {
-    $value = get_option('leanwi_highlighted_button_border_color', '#ff9800'); // Get saved value or default to this hex vaue
-    echo '<input type="color" id="leanwi_highlighted_button_border_color" name="leanwi_highlighted_button_border_color" value="' . esc_attr($value) . '" />';
+function leanwi_event_highlighted_button_border_color_field() {
+    $value = get_option('leanwi_event_highlighted_button_border_color', '#ff9800'); // Get saved value or default to this hex vaue
+    echo '<input type="color" id="leanwi_event_highlighted_button_border_color" name="leanwi_event_highlighted_button_border_color" value="' . esc_attr($value) . '" />';
 }
 
 // Function to display the highlighted bg color input
-function leanwi_highlighted_button_bg_color_field() {
-    $value = get_option('leanwi_highlighted_button_bg_color', '#ffe0b3'); // Get saved value or default to this hex vaue
-    echo '<input type="color" id="leanwi_highlighted_button_bg_color" name="leanwi_highlighted_button_bg_color" value="' . esc_attr($value) . '" />';
+function leanwi_event_highlighted_button_bg_color_field() {
+    $value = get_option('leanwi_event_highlighted_button_bg_color', '#ffe0b3'); // Get saved value or default to this hex vaue
+    echo '<input type="color" id="leanwi_event_highlighted_button_bg_color" name="leanwi_event_highlighted_button_bg_color" value="' . esc_attr($value) . '" />';
 }
 
 // Function to display the highlighted bg color input
-function leanwi_highlighted_button_text_color_field() {
-    $value = get_option('leanwi_highlighted_button_text_color', '#000000'); // Get saved value or default to this hex vaue
-    echo '<input type="color" id="leanwi_highlighted_button_text_color" name="leanwi_highlighted_button_text_color" value="' . esc_attr($value) . '" />';
+function leanwi_event_highlighted_button_text_color_field() {
+    $value = get_option('leanwi_event_highlighted_button_text_color', '#000000'); // Get saved value or default to this hex vaue
+    echo '<input type="color" id="leanwi_event_highlighted_button_text_color" name="leanwi_event_highlighted_button_text_color" value="' . esc_attr($value) . '" />';
     echo '<hr style="margin-top: 40px; border: 1px solid #ccc;">'; // Adds a horizontal line before the reCAPTCHA fields
 }
 
 // Function to display 'Enable reCAPTCHA' dropdown
-function leanwi_enable_recaptcha_field() {
-    $value = get_option('leanwi_enable_recaptcha', 'no'); // Default to 'no' if not set
+function leanwi_event_enable_recaptcha_field() {
+    $value = get_option('leanwi_event_enable_recaptcha', 'no'); // Default to 'no' if not set
     ?>
-    <select id="leanwi_enable_recaptcha" name="leanwi_enable_recaptcha">
+    <select id="leanwi_event_enable_recaptcha" name="leanwi_event_enable_recaptcha">
         <option value="yes" <?php selected($value, 'yes'); ?>>Yes</option>
         <option value="no" <?php selected($value, 'no'); ?>>No</option>
     </select>
@@ -2301,15 +2278,15 @@ function leanwi_enable_recaptcha_field() {
 }
 
 // Function to display the reCAPTCHA site key input
-function leanwi_recaptcha_site_key_field() {
-    $value = get_option('leanwi_recaptcha_site_key', ''); // Get saved value or default to an empty string
-    echo '<input type="password" id="leanwi_recaptcha_site_key" name="leanwi_recaptcha_site_key" value="' . esc_attr($value) . '" style="width: 75%;" />';
+function leanwi_event_recaptcha_site_key_field() {
+    $value = get_option('leanwi_event_recaptcha_site_key', ''); // Get saved value or default to an empty string
+    echo '<input type="password" id="leanwi_event_recaptcha_site_key" name="leanwi_event_recaptcha_site_key" value="' . esc_attr($value) . '" style="width: 75%;" />';
 }
 
 // Function to display the reCAPTCHA secret key input
-function leanwi_recaptcha_secret_key_field() {
-    $value = get_option('leanwi_recaptcha_secret_key', ''); // Get saved value or default to an empty string
-    echo '<input type="password" id="leanwi_recaptcha_secret_key" name="leanwi_recaptcha_secret_key" value="' . esc_attr($value) . '" style="width: 75%;" />';
+function leanwi_event_recaptcha_secret_key_field() {
+    $value = get_option('leanwi_event_recaptcha_secret_key', ''); // Get saved value or default to an empty string
+    echo '<input type="password" id="leanwi_event_recaptcha_secret_key" name="leanwi_event_recaptcha_secret_key" value="' . esc_attr($value) . '" style="width: 75%;" />';
     echo '<hr style="margin-top: 40px; margin-bottom: 20px; border: 1px solid #ccc;">'; // Adds a horizontal line before the reCAPTCHA fields
 }
 

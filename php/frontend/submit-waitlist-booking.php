@@ -9,6 +9,28 @@ if (!isset($_POST['submit_event_nonce']) || !wp_verify_nonce($_POST['submit_even
     sendResponse(false, 'Nonce verification failed.');
 }
 
+if(get_option('leanwi_event_enable_recaptcha') === 'yes')
+{
+    if (isset($_POST['g-recaptcha-response'])) {
+        $recaptchaSecret = get_option('leanwi_event_recaptcha_secret_key', '');
+        $response = $_POST['g-recaptcha-response'];
+        
+        // Make a request to the Google reCAPTCHA API to verify the token
+        $remoteIp = $_SERVER['REMOTE_ADDR'];
+        $recaptchaResponse = file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=$recaptchaSecret&response=$response&remoteip=$remoteIp");
+        $recaptchaData = json_decode($recaptchaResponse);
+
+        // Check if the reCAPTCHA is valid
+        if (!$recaptchaData->success || $recaptchaData->score < 0.5) { // reCaptcha score
+            $success = false;
+            $errorMessage = 'reCAPTCHA verification unsuccessful. Please try again.';
+        }
+    } else {
+        $success = false;
+        $errorMessage = 'reCAPTCHA response is missing.';
+    }
+}
+
 // Input validation and sanitization
 $name = sanitize_text_field($_POST['name']);
 $name = wp_unslash($name); // Remove unnecessary escaping

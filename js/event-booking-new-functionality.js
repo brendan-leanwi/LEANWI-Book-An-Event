@@ -238,6 +238,18 @@ function submitBooking(formData) {
         return;
     }
 
+    // Execute reCAPTCHA if enabled
+    if (eventSettings.enableRecaptcha) {
+        grecaptcha.execute(eventSettings.recaptchaSiteKey, { action: 'submit' })
+        .then(function(token) {
+            // Append the reCAPTCHA token to the form
+            formData.append('g-recaptcha-response', token);
+        })
+        .catch(function (error) {
+            console.error('reCAPTCHA error:', error);
+        });
+    }
+
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
     fetch('/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/submit-event-booking.php', {
         method: 'POST',

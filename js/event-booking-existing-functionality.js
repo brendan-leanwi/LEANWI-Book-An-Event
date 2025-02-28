@@ -203,6 +203,41 @@ function displayCosts(booking, costs) { // `costs` contains previously booked co
 
 }
 
+function updateTotalCost() {
+    totalCost = 0;
+    let totalAttending = 0;
+    let totalEvents = 0;
+
+    // Loop through all cost items and calculate the total cost, total attending, and total events
+    document.querySelectorAll('.cost-item').forEach(function (costItem) {
+        const costAmount = parseFloat(costItem.querySelector('.cost-amount').textContent.replace('$', ''));
+        const attending = parseInt(costItem.querySelector('.attending-input').value, 10) || 0;
+        totalCost += costAmount * attending;
+        totalAttending += attending;  // Sum the total participants
+        // Retrieve and log the data-cost-id
+        //const costId = costItem.querySelector('.cost-name').getAttribute('data-cost-id');
+        //console.log('Cost ID:', costId, ' Amount:', costAmount, ' Attending:', attending);
+
+    });
+
+    // Get the number of selected occurrences
+    const occurrencesCount = getSelectedOccurrencesCount();
+    totalEvents = occurrencesCount;  // Set total events to the selected occurrences count
+    let finalCost = totalCost * totalEvents;
+
+    // Set correct wording for 'person' or 'people'
+    const participantsText = totalAttending === 1 ? 'person' : 'people';
+    const eventsText = totalEvents === 1 ? 'Event' : 'Events';
+
+    // Update the total cost display
+    totalCostDisplay.textContent = `Your total cost is $${finalCost.toFixed(2)} for ${totalEvents} ${eventsText} with ${totalAttending} ${participantsText} attending.`;
+}
+
+// Function to get selected occurrences count
+function getSelectedOccurrencesCount() {
+    return document.querySelectorAll('.occurrence-checkbox:checked').length;
+}
+
 function displayOccurrences(booking, futureOccurrences, pastOccurrences) {
     let occurrencesContainer = document.querySelector('#occurrences-container');
     occurrencesContainer.innerHTML = ''; // Clear any previous content

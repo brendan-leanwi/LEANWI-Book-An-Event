@@ -14,6 +14,11 @@ add_action('wp_enqueue_scripts', function () {
 
 // Register the shortcode for the event details
 function display_event_details() {
+
+    
+    $use_recaptcha = get_option('leanwi_event_enable_recaptcha', 'no'); // Check if reCAPTCHA is enabled
+    $recaptcha_site_key = get_option('leanwi_event_recaptcha_site_key', ''); // Retrieve the reCAPTCHA site key
+
     // Output the HTML and add the venue ID as a hidden field
     ob_start();
     $current_user = wp_get_current_user();
@@ -23,6 +28,14 @@ function display_event_details() {
         <!-- Data from leanwi_event_data will be placed in here as hidden input fields via JavaScript (event-booking.js) on page load -->
     </div>
 
+    <?php
+    // Only include reCAPTCHA script if enabled
+    if ('yes' === $use_recaptcha && !empty($recaptcha_site_key)) {
+        ?>
+        <script src="https://www.google.com/recaptcha/api.js?render=<?php echo esc_js($recaptcha_site_key); ?>"></script>
+        <?php
+    }
+    ?>
     <div class="staff-search-container" style="display: <?php echo $is_booking_staff ? 'block' : 'none'; ?>;">
         <h2 style="text-align: center;">Search by Name</h2> 
         <form id="staffSearchForm" method="get" style="margin-bottom: 20px;">

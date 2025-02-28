@@ -78,6 +78,8 @@ function leanwi_event_create_tables() {
         physical_address VARCHAR(255),
         zipcode VARCHAR(10),
         attending_virtually TINYINT(1) DEFAULT 0,
+        has_paid TINYINT(1) DEFAULT 0,
+        feedback_request_sent TINYINT(1) DEFAULT 0,
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";
