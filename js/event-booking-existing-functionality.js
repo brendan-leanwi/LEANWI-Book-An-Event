@@ -17,9 +17,6 @@ function showExistingBookingContainer() {
         }
     }
 
-    document.body.style.cursor = 'wait'; // Set cursor before fetch starts
-
-    console.log("window.leanwiBookingData.globalEventdata: ", window.leanwiBookingData.globalEventData);
     createFormFields(window.leanwiBookingData.globalEventData);
 }
 

@@ -109,3 +109,32 @@ function generateBookingReference() {
 function generateWaitListReference() {
     return "WL#" + Math.random().toString(36).substring(2, 9);
 }
+
+function setButtonColors() {
+    
+    // Get the user-defined colors from bookingSettings
+    const button1BorderColor = eventSettings.button_1_border_color || '#000000';
+    const button1BgColor = eventSettings.button_1_bg_color || '#007BFF';
+    const button1TextColor = eventSettings.button_1_text_color || '#FFFFFF';
+
+    const button2BorderColor = eventSettings.button_2_border_color || '#000000';
+    const button2BgColor = eventSettings.button_2_bg_color || '#007BFF';
+    const button2TextColor = eventSettings.button_2_text_color || '#FFFFFF';
+
+    const button3BorderColor = eventSettings.button_3_border_color || '#000000';
+    const button3BgColor = eventSettings.button_3_bg_color || '#007BFF';
+    const button3TextColor = eventSettings.button_3_text_color || '#FFFFFF';
+
+    // Update the CSS variables in the :root selector
+    document.documentElement.style.setProperty('--button_1_border_color', button1BorderColor);
+    document.documentElement.style.setProperty('--button_1_bg_color', button1BgColor);
+    document.documentElement.style.setProperty('--button_1_text_color', button1TextColor);
+    
+    document.documentElement.style.setProperty('--button_2_border_color', button2BorderColor);
+    document.documentElement.style.setProperty('--button_2_bg_color', button2BgColor);
+    document.documentElement.style.setProperty('--button_2_text_color', button2TextColor);
+    
+    document.documentElement.style.setProperty('--button_3_border_color', button3BorderColor);
+    document.documentElement.style.setProperty('--button_3_bg_color', button3BgColor);
+    document.documentElement.style.setProperty('--button_3_text_color', button3TextColor);
+}

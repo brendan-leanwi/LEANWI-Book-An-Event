@@ -87,10 +87,24 @@ function leanwi_event_enqueue_scripts() {
             true
         );
 
-        // Localize the maximum booking slots setting and maxMonths
+        // Localize settings
         wp_localize_script('event-booking-new-functionality-js', 'eventSettings', array(
             'enableRecaptcha' => get_option('leanwi_event_enable_recaptcha', 'no'),
             'recaptchaSiteKey' => get_option('leanwi_event_recaptcha_site_key', '')
+        ));
+
+        wp_localize_script('event-booking-utils-js', 'eventSettings', array(
+            'button_1_border_color' => get_option('leanwi_event_button_type_1_border_color', '#000000'), // Default Black
+            'button_1_bg_color' => get_option('leanwi_event_button_type_1_bg_color', '#007BFF'), // Default Blue
+            'button_1_text_color' => get_option('leanwi_event_button_type_1_text_color', '#FFFFFF'), // Default White
+
+            'button_2_border_color' => get_option('leanwi_event_button_type_2_border_color', '#000000'),
+            'button_2_bg_color' => get_option('leanwi_event_button_type_2_bg_color', '#007BFF'),
+            'button_2_text_color' => get_option('leanwi_event_button_type_2_text_color', '#FFFFFF'),
+
+            'button_3_border_color' => get_option('leanwi_event_button_type_3_border_color', '#000000'),
+            'button_3_bg_color' => get_option('leanwi_event_button_type_3_bg_color', '#007BFF'),
+            'button_3_text_color' => get_option('leanwi_event_button_type_3_text_color', '#FFFFFF')
         ));
         
         wp_enqueue_script('event-booking-initial-load-js');

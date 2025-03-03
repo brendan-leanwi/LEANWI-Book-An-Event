@@ -1,3 +1,17 @@
+:root {
+    --button_1_border_color: #000000; /* Default background color */
+    --button_1_bg_color: #007BFF; /* Default border color */
+    --button_1_text_color: #FFFFFF; /* Default border color */
+
+    --button_2_border_color: #000000; /* Default background color */
+    --button_2_bg_color: #007BFF; /* Default border color */
+    --button_2_text_color: #FFFFFF; /* Default border color */
+
+    --button_3_border_color: #000000; /* Default background color */
+    --button_3_bg_color: #007BFF; /* Default border color */
+    --button_3_text_color: #FFFFFF; /* Default border color */
+}
+
 /* Container styling */
 .admin-occurrences-container,
 .booking-choices-container,
@@ -36,21 +50,21 @@
 #attendance-form button[type="submit"] {
     width: 100% !important;
     padding: 12px !important;
-    background-color: #4CAF50 !important;
-    color: white !important;
+    background-color: var(--button_2_bg_color) !important;
+    color: var(--button_2_text_color) !important;
     font-size: 16px !important;
     font-weight: bold !important;
-    border: none !important;
+    border: var(--button_2_border_color) !important;
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
 }
 
-/* Button hover effect */
+/* Button hover effect
 #attendance-form button[type="submit"]:hover {
-    background-color: #45a049 !important;
+    background-color: var(--button_1_bg_color) !important;
 }
-
+*/
 
 /* Style the occurrences and costs containers */
 #occurrences-container,
@@ -67,26 +81,26 @@
 }
 
 .staff-button-container-1 .find-button{
-    background-color: #a82d24 !important;
-    color: white !important;
+    background-color: var(--button_3_bg_color) !important;
+    color: var(--button_3_text_color) !important;
     width: 100% !important;
     padding: 12px !important;
     font-size: 16px !important;
     font-weight: bold !important;
-    border: none !important;
+    border: var(--button_3_border_color) !important;
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
 }
 
 .staff-button-container-2 .find-button{
-    background-color: #2462a8 !important;
-    color: white !important;
+    background-color: var(--button_1_bg_color) !important;
+    color: var(--button_1_text_color) !important;
     width: 100% !important;
     padding: 12px !important;
     font-size: 16px !important;
     font-weight: bold !important;
-    border: none !important;
+    border: var(--button_1_border_color) !important;
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
@@ -95,26 +109,31 @@
 /* Default submit button color */
 .existing-booking-container .find-button,
 #attendance-form button[type="submit"] {
-    background-color: #4CAF50 !important;
-    color: white !important;
+    background-color: var(--button_2_bg_color) !important;
+    color: var(--button_2_text_color) !important;
+    border: var(--button_2_border_color) !important;
 }
 
 /* Button hover effect */
 .existing-booking-container .find-button:hover,
 #attendance-form button[type="submit"]:hover {
-    background-color: #45a049 !important;
+    background-color: var(--button_2_bg_color) !important;
 }
 
 /* Specific styling for the delete button */
 .booking-choices-container #retrieve-booking,
 .existing-booking-container #delete-booking {
-    background-color: red !important;
+    background-color: var(--button_3_bg_color) !important;
+    color: var(--button_3_text_color) !important;
+    border: var(--button_3_border_color) !important;
 }
 
 /* Specific styling for the delete button */
 .event-attendance #waitlist-booking,
 .booking-choices-container #retrieve-booking {
-    background-color: blue !important;
+    background-color: var(--button_1_bg_color) !important;
+    color: var(--button_1_text_color) !important;
+    border: var(--button_1_border_color) !important;
     border-radius: 4px !important;
 }
 
@@ -130,8 +149,9 @@
     padding: 10px !important;
     font-size: 16px !important;
     font-weight: bold !important; 
-    border: none !important;
-    color: white !important;
+    background-color: var(--button_1_bg_color) !important;
+    color: var(--button_1_text_color) !important;
+    border: var(--button_1_border_color) !important;
 }
 
 /* Adjust button width */
@@ -362,14 +382,11 @@ label {
     font-size: 1rem;
     border: none;
     border-radius: 5px;
-    background-color: #007bff;
-    color: white;
+    background-color: var(--button_1_bg_color) !important;
+    color: var(--button_1_text_color) !important;
+    border: var(--button_1_border_color) !important;
     cursor: pointer;
     transition: background 0.3s ease-in-out;
-}
-
-#staffSearchForm button:hover {
-    background-color: #0056b3;
 }
 
 /* Search results container */

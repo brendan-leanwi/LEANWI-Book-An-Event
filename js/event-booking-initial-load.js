@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Let's show in the cosole log whether the user is staff or not
     console.log("Is Event Staff:", isEventStaff);
 
+    setButtonColors();
+
     // Get event slug from URL
     try {
         let pathArray = window.location.pathname.split('/').filter(segment => segment);

@@ -2107,9 +2107,16 @@ function leanwi_event_register_settings() {
     register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_admin_email_address');
     register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_email_from_name');
     register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_feedback_form_link');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_highlighted_button_border_color');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_highlighted_button_bg_color');
-    register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_highlighted_button_text_color');
+
+    // Register settings for the three button types
+    $button_types = ['button_type_1', 'button_type_2', 'button_type_3'];
+    $color_settings = ['border_color', 'bg_color', 'text_color'];
+
+    foreach ($button_types as $button_type) {
+        foreach ($color_settings as $color) {
+            register_setting('leanwi_event_plugin_settings_group', "leanwi_event_{$button_type}_{$color}");
+        }
+    }
 
     // Register settings for reCAPTCHA enable, site key, and secret key
     register_setting('leanwi_event_plugin_settings_group', 'leanwi_event_enable_recaptcha');
@@ -2160,6 +2167,24 @@ function leanwi_event_register_settings() {
         'leanwi_event_main_section'           // Section ID
     );
 
+    // Add a settings section for the button colors
+    add_settings_section(
+        'leanwi_event_button_colors_section',
+        'Button Color Settings',
+        '__return_false',
+        'leanwi-book-an-event-settings'
+    );
+
+    // Add the settings field for the table
+    add_settings_field(
+        'leanwi_event_button_colors',
+        'Customize Button Colors',
+        __NAMESPACE__ . '\\leanwi_event_render_button_color_settings',
+        'leanwi-book-an-event-settings',
+        'leanwi_event_button_colors_section'
+    );
+
+    /*
     // Add border color for highlighted buttons field
     add_settings_field(
         'leanwi_event_highlighted_button_border_color',  // Field ID
@@ -2186,7 +2211,7 @@ function leanwi_event_register_settings() {
         'leanwi-book-an-event-settings',  // Page slug
         'leanwi_event_main_section'           // Section ID
     );
-
+*/
     // Add field to enable/disable reCAPTCHA
     add_settings_field(
         'leanwi_event_enable_recaptcha',
@@ -2247,6 +2272,41 @@ function leanwi_event_feedback_form_link_field() {
     echo '<input type="url" id="leanwi_event_feedback_form_link" name="leanwi_event_feedback_form_link" value="' . esc_attr($value) . '"  style="width: 75%;"/>';
 }
 
+// Function to render the table
+function leanwi_event_render_button_color_settings() {
+    $buttons = [
+        'button_type_1' => 'Button 1 (Find)',
+        'button_type_2' => 'Button 2 (Signup / Submit)',
+        'button_type_3' => 'Button 3 (Delete)',
+    ];
+
+    $colors = [
+        'border' => ['label' => 'Border color', 'default' => '#000000'],  // Black
+        'bg' => ['label' => 'Background color', 'default' => '#007BFF'], // Blue
+        'text' => ['label' => 'Text color', 'default' => '#FFFFFF'],      // White
+    ];
+
+    echo '<table class="form-table"><thead><tr><th></th>'; // Empty top-left cell
+    foreach ($buttons as $key => $label) {
+        echo '<th>' . esc_html($label) . '</th>';
+    }
+    echo '</tr></thead><tbody>';
+
+    foreach ($colors as $colorKey => $colorData) {
+        echo '<tr>';
+        echo '<th>' . esc_html($colorData['label']) . '</th>';
+        foreach ($buttons as $buttonKey => $buttonLabel) {
+            $option_name = 'leanwi_event_' . $buttonKey . '_' . $colorKey . '_color';
+            $value = get_option($option_name, $colorData['default']); // Use specific default color
+            echo '<td><input type="color" name="' . esc_attr($option_name) . '" value="' . esc_attr($value) . '"></td>';
+        }
+        echo '</tr>';
+    }
+
+    echo '</tbody></table>';
+}
+
+/*
 // Function to display the highlighted border color input
 function leanwi_event_highlighted_button_border_color_field() {
     $value = get_option('leanwi_event_highlighted_button_border_color', '#ff9800'); // Get saved value or default to this hex vaue
@@ -2265,7 +2325,7 @@ function leanwi_event_highlighted_button_text_color_field() {
     echo '<input type="color" id="leanwi_event_highlighted_button_text_color" name="leanwi_event_highlighted_button_text_color" value="' . esc_attr($value) . '" />';
     echo '<hr style="margin-top: 40px; border: 1px solid #ccc;">'; // Adds a horizontal line before the reCAPTCHA fields
 }
-
+*/
 // Function to display 'Enable reCAPTCHA' dropdown
 function leanwi_event_enable_recaptcha_field() {
     $value = get_option('leanwi_event_enable_recaptcha', 'no'); // Default to 'no' if not set
