@@ -54,7 +54,7 @@
     color: var(--button_2_text_color) !important;
     font-size: 16px !important;
     font-weight: bold !important;
-    border: var(--button_2_border_color) !important;
+    border: 1px solid var(--button_2_border_color) !important;
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
@@ -87,7 +87,7 @@
     padding: 12px !important;
     font-size: 16px !important;
     font-weight: bold !important;
-    border: var(--button_3_border_color) !important;
+    border: 1px solid var(--button_3_border_color) !important;
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
@@ -100,7 +100,7 @@
     padding: 12px !important;
     font-size: 16px !important;
     font-weight: bold !important;
-    border: var(--button_1_border_color) !important;
+    border: 1px solid var(--button_1_border_color) !important;
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
@@ -111,7 +111,7 @@
 #attendance-form button[type="submit"] {
     background-color: var(--button_2_bg_color) !important;
     color: var(--button_2_text_color) !important;
-    border: var(--button_2_border_color) !important;
+    border: 1px solid var(--button_2_border_color) !important;
 }
 
 /* Button hover effect */
@@ -133,7 +133,7 @@
 .booking-choices-container #retrieve-booking {
     background-color: var(--button_1_bg_color) !important;
     color: var(--button_1_text_color) !important;
-    border: var(--button_1_border_color) !important;
+    border: 1px solid var(--button_1_border_color) !important;
     border-radius: 4px !important;
 }
 
@@ -151,7 +151,7 @@
     font-weight: bold !important; 
     background-color: var(--button_1_bg_color) !important;
     color: var(--button_1_text_color) !important;
-    border: var(--button_1_border_color) !important;
+    border: 1px solid var(--button_1_border_color) !important;
 }
 
 /* Adjust button width */
@@ -380,11 +380,10 @@ label {
 #staffSearchForm button {
     padding: 10px 15px;
     font-size: 1rem;
-    border: none;
     border-radius: 5px;
     background-color: var(--button_1_bg_color) !important;
     color: var(--button_1_text_color) !important;
-    border: var(--button_1_border_color) !important;
+    border: 1px solid var(--button_1_border_color) !important;
     cursor: pointer;
     transition: background 0.3s ease-in-out;
 }
