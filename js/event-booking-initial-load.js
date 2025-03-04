@@ -21,10 +21,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Get event slug from URL
     try {
         let pathArray = window.location.pathname.split('/').filter(segment => segment);
-        eventSlug = pathArray[pathArray.length - 1];
+        window.leanwiBookingData.eventSlug = pathArray[pathArray.length - 1];
         // Check if the last segment is a date (YYYY-MM-DD format)
-        if (/^\d{4}-\d{2}-\d{2}$/.test(eventSlug)) {
-            eventSlug = pathArray[pathArray.length - 2];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(window.leanwiBookingData.eventSlug)) {
+            window.leanwiBookingData.eventSlug = pathArray[pathArray.length - 2];
         }
     } catch (error) {
         console.error('Error getting event slug:', error);
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchResults = document.getElementById("searchResults");
     document.body.style.cursor = 'wait'; // Set cursor before fetch starts
     // Fetch event data
-    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
+    fetch(`/wp-content/plugins/LEANWI-Book-An-Event/php/frontend/get-event-via-slug.php?event_slug=${window.leanwiBookingData.eventSlug}&_wpnonce=${leanwiVars.ajax_nonce}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -71,8 +71,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Get booking_id from the URL and set it in the unique_id input field if it exists
     const bookingRef = getQueryParam('booking_ref');
     if (bookingRef) {
-        window.leanwiBookingData.waitListBooking = bookingRef.startsWith("WL#");
+        window.leanwiBookingData.waitListBooking = bookingRef.startsWith("WL-");
+
+        console.log("Booking Ref from URL:", bookingRef);
         document.getElementById('booking_ref').value = bookingRef;
+        console.log("Set Booking Ref:", document.getElementById('booking_ref').value);
+
         document.getElementById('existing_booking_heading').textContent = "Your Booking Reference has been Entered:";
         document.getElementById('event_attendance_heading').textContent = "Your details for attending this event";
         document.getElementById('booking-choices-container').style.display = 'none';
@@ -226,13 +230,21 @@ function createFormFields(event) {
     const fields = {
         'event_data_id': event.event_data_id,
         'post_id': event.post_id,
+        'event_name': event.event_name,
         'event_url': event.event_url,
         'event_image': event.event_image,
         'capacity': event.capacity,
         'category_id': event.category_id,
         'audience_id': event.audience_id,
         'historic': event.historic,
-        'participation_rule': event.participation_rule
+        'participation_rule': event.participation_rule,
+        'virtual_event_rule': event.virtual_event_rule,
+        'virtual_event_url': event.virtual_event_url,
+        'virtual_event_password': event.virtual_event_password,
+        'event_admin_email': event.event_admin_email,
+        'extra_email_text': event.extra_email_text,
+        'extra_event_url': event.extra_event_url,
+        'include_extra_event_url_in_email': event.include_extra_event_url_in_email
     };
 
     for (const [key, value] of Object.entries(fields)) {

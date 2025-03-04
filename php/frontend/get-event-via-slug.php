@@ -31,11 +31,14 @@ if (!empty($event_slug)) {
 
     // Prepare SQL statement using $wpdb to get booking and user details
     $sql = $wpdb->prepare("
-        select * from $data_table
-        where post_id = (
-        select id from $posts_table where post_name = %s
-        and post_type = 'tribe_events' and post_content != '')
+        SELECT d.*, p.post_title AS event_name
+        FROM $data_table d
+        JOIN $posts_table p ON d.post_id = p.ID
+        WHERE p.post_name = %s
+        AND p.post_type = 'tribe_events' 
+        AND p.post_content != ''
     ", $event_slug);
+
 
     // Execute the query
     $results = $wpdb->get_results($sql, ARRAY_A);
@@ -47,12 +50,12 @@ if (!empty($event_slug)) {
             return [
                 'event_data_id' => intval($result['event_data_id']),
                 'post_id' => sanitize_text_field($result['post_id']),
+                'event_name' => esc_html($result['event_name']),
                 'event_url' => esc_url($result['event_url']),
                 'event_image' => esc_url($result['event_image']),
                 'capacity' => intval($result['capacity']),
                 'category_id' => intval($result['category_id']),
                 'audience_id' => intval($result['audience_id']),
-                'historic' => intval($result['historic']),
                 'participation_rule' => esc_html($result['participation_rule']),
                 'booking_before_hours' => intval($result['booking_before_hours']),
                 'cancellation_before_hours' => intval($result['cancellation_before_hours']),
@@ -61,10 +64,14 @@ if (!empty($event_slug)) {
                 'virtual_event_url' => esc_url($result['virtual_event_url']),
                 'virtual_event_password' => sanitize_text_field($result['virtual_event_password']),
                 'event_admin_email' => sanitize_email($result['event_admin_email']),
+                'extra_email_text' => esc_html($result['extra_email_text']),
+                'extra_event_url' => esc_url($result['extra_event_url']),
+                'include_extra_event_url_in_email' => intval($result['include_extra_event_url_in_email']),
                 'include_virtual_bookings_in_capacity_calc' => intval($result['include_virtual_bookings_in_capacity_calc']),
                 'include_special_notes' => intval($result['include_special_notes']),
                 'include_physical_address' => intval($result['include_physical_address']),
                 'include_zipcode' => intval($result['include_zipcode']),
+                'historic' => intval($result['historic']),
             ];
         }, $results);
 

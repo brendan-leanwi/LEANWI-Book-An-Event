@@ -398,6 +398,12 @@ function leanwi_add_event_page() {
             $virtual_event_password = wp_kses_post($_POST['virtual_event_password']);
             $virtual_event_password = wp_unslash($virtual_event_password);
             $event_admin_email = isset($_POST['event_admin_email']) ? sanitize_email($_POST['event_admin_email']) : '';
+
+            $extra_email_text = wp_kses_post($_POST['extra_email_text']);
+            $extra_email_text = wp_unslash($extra_email_text);
+            $extra_event_url = esc_url($_POST['extra_event_url']);
+            $include_extra_event_url_in_email = isset($_POST['include_extra_event_url_in_email']) ? 1 : 0;
+
             $include_virtual_bookings_in_capacity_calc = isset($_POST['include_virtual_bookings_in_capacity_calc']) ? 1 : 0;
             $include_special_notes = isset($_POST['include_special_notes']) ? 1 : 0;
             $include_physical_address = isset($_POST['include_physical_address']) ? 1 : 0;
@@ -421,6 +427,9 @@ function leanwi_add_event_page() {
                     'virtual_event_url' => $virtual_event_url,
                     'virtual_event_password' => $virtual_event_password,
                     'event_admin_email' => $event_admin_email,
+                    'extra_email_text' => $extra_email_text,
+                    'extra_event_url' => $extra_event_url,
+                    'include_extra_event_url_in_email' => $include_extra_event_url_in_email,
                     'include_virtual_bookings_in_capacity_calc' => $include_virtual_bookings_in_capacity_calc,
                     'include_special_notes' => $include_special_notes,
                     'include_physical_address' => $include_physical_address,
@@ -501,6 +510,9 @@ function leanwi_add_event_page() {
         'virtual_event_url' => '',
         'virtual_event_password' => '',
         'event_admin_email' => '',
+        'extra_email_text' => '',
+        'extra_event_url' => '',
+        'include_extra_event_url_in_email' => 0,
         'include_virtual_bookings_in_capacity_calc' => 0,
         'include_special_notes' => 0,
         'include_physical_address' => 0,
@@ -688,6 +700,22 @@ function leanwi_add_event_page() {
                     <td><input type="email" id="event_admin_email" name="event_admin_email" style="width: 90%;" value="<?php echo esc_attr($event->event_admin_email); ?>" /></td>
                 </tr>
                 <tr>
+                    <th><label for="extra_email_text">Extra text to be added to confirmation emails</label></th>
+                    <td>
+                        <textarea name="extra_email_text" id="extra_email_text" rows="3" style="width: 80%;"><?php echo esc_textarea($event->extra_email_text ?? ''); ?></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="extra_event_url">Additional website or facebook link for the event</label></th>
+                    <td><input type="text" id="extra_event_url" name="extra_event_url" value="<?php echo esc_attr($event->extra_event_url); ?>" required style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="include_extra_event_url_in_email">Include the above additional link in emails?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_extra_event_url_in_email" name="include_extra_event_url_in_email" <?php echo ($event->include_extra_event_url_in_email == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="include_special_notes">Allow users to add notes to their booking?</label></th>
                     <td>
                         <input type="checkbox" id="include_special_notes" name="include_special_notes" <?php echo ($event->include_special_notes == 1) ? 'checked' : ''; ?>/>
@@ -725,7 +753,7 @@ function leanwi_add_event_page() {
                             <input type="checkbox" name="disclaimer[]" value="<?php echo esc_attr($disclaimer->id); ?>" id="disclaimer_<?php echo esc_attr($disclaimer->id); ?>" />
                             <label for="disclaimer_<?php echo esc_attr($disclaimer->id); ?>">Include this disclaimer</label><br/>
                             <!-- Change input to textarea and set rows="3" for 3 lines -->
-                            <textarea name="disclaimer_text_<?php echo esc_attr($disclaimer->id); ?>" rows="3" style="width: 80%;"><?php echo esc_textarea($disclaimer->disclaimer); ?></textarea>
+                            <textarea name="disclaimer_text_<?php echo esc_attr($disclaimer->id); ?>" rows="3" style="width: 80%;"><?php echo esc_textarea($disclaimer->disclaimer ?? ''); ?></textarea>
                         </div>
                     <?php endforeach; ?>
 
@@ -854,6 +882,12 @@ function leanwi_edit_event_page() {
             $virtual_event_password = wp_kses_post($_POST['virtual_event_password']);
             $virtual_event_password = wp_unslash($virtual_event_password);
             $event_admin_email = isset($_POST['event_admin_email']) ? sanitize_email($_POST['event_admin_email']) : '';
+
+            $extra_email_text = wp_kses_post($_POST['extra_email_text']);
+            $extra_email_text = wp_unslash($extra_email_text);
+            $extra_event_url = esc_url($_POST['extra_event_url']);
+            $include_extra_event_url_in_email = isset($_POST['include_extra_event_url_in_email']) ? 1 : 0;
+
             $include_virtual_bookings_in_capacity_calc = isset($_POST['include_virtual_bookings_in_capacity_calc']) ? 1 : 0;
             $include_special_notes = isset($_POST['include_special_notes']) ? 1 : 0;
             $include_physical_address = isset($_POST['include_physical_address']) ? 1 : 0;
@@ -879,6 +913,9 @@ function leanwi_edit_event_page() {
                     'virtual_event_url' => $virtual_event_url,
                     'virtual_event_password' => $virtual_event_password,
                     'event_admin_email' => $event_admin_email,
+                    'extra_email_text' => $extra_email_text,
+                    'extra_event_url' => $extra_event_url,
+                    'include_extra_event_url_in_email' => $include_extra_event_url_in_email,
                     'include_virtual_bookings_in_capacity_calc' => $include_virtual_bookings_in_capacity_calc,
                     'include_special_notes' => $include_special_notes,
                     'include_physical_address' => $include_physical_address,
@@ -1130,6 +1167,22 @@ function leanwi_edit_event_page() {
                     <td><input type="email" id="event_admin_email" name="event_admin_email" style="width: 90%;" value="<?php echo esc_attr($event->event_admin_email); ?>" /></td>
                 </tr>
                 <tr>
+                    <th><label for="extra_email_text">Extra text to be added to confirmation emails</label></th>
+                    <td>
+                        <textarea name="extra_email_text" id="extra_email_text" rows="3" style="width: 80%;"><?php echo esc_textarea($event->extra_email_text ?? ''); ?></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="extra_event_url">Additional website or facebook link for the event</label></th>
+                    <td><input type="text" id="extra_event_url" name="extra_event_url" value="<?php echo esc_attr($event->extra_event_url); ?>" required style="width: 90%;"/></td>
+                </tr>
+                <tr>
+                    <th><label for="include_extra_event_url_in_email">Include the above additional link in emails?</label></th>
+                    <td>
+                        <input type="checkbox" id="include_extra_event_url_in_email" name="include_extra_event_url_in_email" <?php echo ($event->include_extra_event_url_in_email == 1) ? 'checked' : ''; ?>/>
+                    </td>
+                </tr>
+                <tr>
                     <th><label for="include_special_notes">Allow users to add notes to their booking?</label></th>
                     <td>
                         <input type="checkbox" id="include_special_notes" name="include_special_notes" <?php echo ($event->include_special_notes == 1) ? 'checked' : ''; ?>/>
@@ -1195,7 +1248,7 @@ function leanwi_edit_event_page() {
                                 <input type="checkbox" name="disclaimer[]" value="<?php echo esc_attr($disclaimer->id); ?>" id="disclaimer_<?php echo esc_attr($disclaimer->id); ?>" checked />
                                 <label for="disclaimer_<?php echo esc_attr($disclaimer->id); ?>">Include this disclaimer</label><br/>
                                 <!-- Textarea for disclaimer text -->
-                                <textarea name="disclaimer_text_<?php echo esc_attr($disclaimer->id); ?>" rows="3" style="width: 80%;"><?php echo esc_textarea($disclaimer->disclaimer); ?></textarea>
+                                <textarea name="disclaimer_text_<?php echo esc_attr($disclaimer->id); ?>" rows="3" style="width: 80%;"><?php echo esc_textarea($disclaimer->disclaimer ?? ''); ?></textarea>
                             </div>
                         <?php endforeach; ?>
 
@@ -1805,7 +1858,7 @@ function leanwi_event_edit_disclaimer_page() {
             echo '<input type="hidden" name="id" value="' . esc_attr($disclaimer->id) . '">';
 
             // Display the disclaimer input
-            echo '<p>Disclaimer:<br><textarea name="disclaimer" rows="5" cols="50" required>' . esc_textarea($disclaimer->disclaimer) . '</textarea></p>';
+            echo '<p>Disclaimer:<br><textarea name="disclaimer" rows="5" cols="50" required>' . esc_textarea($disclaimer->disclaimer ?? '') . '</textarea></p>';
             
             // Submit button to update the disclaimer
             echo '<p><input type="submit" name="update_disclaimer" value="Save Changes" class="button button-primary"></p>';

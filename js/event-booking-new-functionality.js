@@ -176,17 +176,30 @@ function submitBooking(formData) {
         formData.append('existing_booking_reference', '');
     }
     formData.append('new_booking_reference', generateBookingReference()); // Pass a generated booking reference
-    
-    // Retrieve the event_data_id from the hidden input field in hidden_event_data div
-    const eventDataId = document.querySelector('#hidden_event_data input[name="event_data_id"]');
-    if (eventDataId) {
-        formData.append('event_data_id', eventDataId.value);
-    }
 
-    // Retrieve the event_data_id from the hidden input field in hidden_event_data div
-    const eventCapacity = document.querySelector('#hidden_event_data input[name="capacity"]');
-    if (eventDataId) {
-        formData.append('capacity', eventCapacity.value);
+    // Append the required fields from the Event Hidden Fields DIV
+    const hiddenDiv = document.getElementById('hidden_event_data');
+    if (hiddenDiv) {
+        const fieldNames = [
+            'event_data_id',
+            'event_name',
+            'capacity',
+            'event_url',
+            'virtual_event_rule',
+            'virtual_event_url',
+            'virtual_event_password',
+            'event_admin_email',
+            'extra_email_text',
+            'extra_event_url',
+            'include_extra_event_url_in_email'
+        ];
+
+        fieldNames.forEach(field => {
+            const input = hiddenDiv.querySelector(`input[name="${field}"]`);
+            if (input) {
+                formData.append(field, input.value);
+            }
+        });
     }
     
     // Collect the cost-related data from the form

@@ -25,6 +25,7 @@ $new_status = 1;
 $success = true;
 
 $email_from_name = get_option('leanwi_event_email_from_name', 'Library Events Team');
+$email_from_name = wp_unslash($email_from_name);
 
 //Get the URL for the feedback form - likely a google form
 $feedback_form_url = esc_url(get_option('leanwi_event_feedback_form_link', ''));

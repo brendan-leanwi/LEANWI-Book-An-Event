@@ -31,8 +31,8 @@ function leanwi_event_create_tables() {
     $sql3 = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}leanwi_event_data (
         event_data_id INT AUTO_INCREMENT PRIMARY KEY,
         post_id BIGINT(20) unsigned NOT NULL,
-        event_url CHAR(255) NOT NULL,
-        event_image CHAR(255),
+        event_url VARCHAR(255) NOT NULL,
+        event_image VARCHAR(255),
         participation_rule VARCHAR(10) NOT NULL DEFAULT 'any',
         capacity INT NOT NULL,
         category_id INT NOT NULL,
@@ -41,9 +41,12 @@ function leanwi_event_create_tables() {
         cancellation_before_hours INT DEFAULT 0,
         register_by_date DATE NULL,
         virtual_event_rule VARCHAR(6),
-        virtual_event_url CHAR(255),
+        virtual_event_url VARCHAR(255),
         virtual_event_password VARCHAR(25),
         event_admin_email VARCHAR(255),
+        extra_email_text VARCHAR(255),
+        extra_event_url VARCHAR(255),
+        include_extra_event_url_in_email TINYINT(1) DEFAULT 0,
         include_virtual_bookings_in_capacity_calc TINYINT(1) DEFAULT 0,
         include_special_notes TINYINT(1) DEFAULT 0,
         include_physical_address TINYINT(1) DEFAULT 0,
@@ -60,7 +63,7 @@ function leanwi_event_create_tables() {
         cost_name VARCHAR(50) NOT NULL,
         cost_amount DECIMAL(10, 2) NOT NULL,
         include_extra_info TINYINT(1) DEFAULT 0,
-        extra_info_label CHAR(255),
+        extra_info_label VARCHAR(255),
         historic TINYINT(1) DEFAULT 0,
         FOREIGN KEY (event_data_id) REFERENCES {$wpdb->prefix}leanwi_event_data(event_data_id) ON DELETE CASCADE
     ) $engine $charset_collate;";

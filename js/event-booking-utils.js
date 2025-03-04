@@ -107,7 +107,7 @@ function generateBookingReference() {
 }
 
 function generateWaitListReference() {
-    return "WL#" + Math.random().toString(36).substring(2, 9);
+    return "WL-" + Math.random().toString(36).substring(2, 9);
 }
 
 function setButtonColors() {

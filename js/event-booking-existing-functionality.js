@@ -35,7 +35,7 @@ existingBookingForm.addEventListener('submit', function (event) {
     // Prepare form data
     const formData = new FormData(this);
     const bookingRef = formData.get('booking_ref'); 
-    window.leanwiBookingData.waitListBooking = bookingRef?.startsWith("WL#") || false;
+    window.leanwiBookingData.waitListBooking = bookingRef?.startsWith("WL-") || false;
 
     const eventDataId = document.querySelector('#hidden_event_data input[name="event_data_id"]');
     if (eventDataId) {
